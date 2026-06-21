@@ -1,11 +1,16 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
+import { enqueueWebhookJob } from "./queue.service.js";
 
 export async function createEvent(
   eventType: string,
   payload: Prisma.InputJsonValue,
 ) {
-  return prisma.event.create({ data: { eventType, payload } });
+  const event = await prisma.event.create({ data: { eventType, payload } });
+
+  await enqueueWebhookJob(event.id);
+
+  return event;
 }
 
 export async function getAllEvents() {
