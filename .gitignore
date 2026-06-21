@@ -5,9 +5,6 @@ node_modules/
 .env
 .env.local
 
-# Prisma generated files (updated path)
-api/src/generated/prisma/
-
 # IDE files
 .vscode/
 
