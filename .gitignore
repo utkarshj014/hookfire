@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Keep environment variables out of version control
+.env
+.env.local
+
+# Prisma generated files (updated path)
+api/src/generated/prisma/
+
+# IDE files
+.vscode/
+
+# Docker
+.docker/
+*.log

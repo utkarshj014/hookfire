@@ -1,0 +1,7 @@
+services:
+  redis:
+    image: redis:8
+    container_name: hookfire-redis
+
+    ports:
+      - "6379:6379"
