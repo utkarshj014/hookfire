@@ -1,10 +1,11 @@
 import { Worker } from "bullmq";
+import { processWebhookJob } from "../processors/webhook.processor.js";
 import { redisConnectionOptions } from "../config/redis.js";
 
 export const webhookWorker = new Worker(
   "webhook-delivery",
   async (job) => {
-    console.log(`Processing job ${job.id} with data:`, job.data);
+    await processWebhookJob(job.data.eventId);
   },
   {
     connection: redisConnectionOptions,
