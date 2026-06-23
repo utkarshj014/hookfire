@@ -11,6 +11,23 @@ model Event {
   eventType String
   payload   Json
   createdAt DateTime @default(now())
+  
+  deliveries Delivery[]
 
    @@map("event")
+}
+
+model Delivery {
+  id         String   @id @default(cuid())
+
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id])
+
+  status     String
+  attempts   Int      @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("delivery")
 }
