@@ -18,3 +18,17 @@ export async function markDeliverySuccess(eventId: string) {
     },
   });
 }
+
+export async function markDeliveryFailed(
+  eventId: string,
+  errorMessage: string,
+) {
+  return prisma.delivery.updateMany({
+    where: { eventId },
+    data: {
+      status: "FAILED",
+      errorMessage,
+      attempts: { increment: 1 },
+    },
+  });
+}

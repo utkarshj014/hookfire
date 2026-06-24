@@ -11,9 +11,10 @@ export async function processWebhookJob({
   attemptsMade: number;
 }) {
   // Simulate Failure
-  const randomFailure = Math.random() < 0.5;
+  // const randomFailure = Math.random() < 0.5;
+  const sureFailure = true;
 
-  if (randomFailure) {
+  if (sureFailure) {
     console.log(`Job ${id} | Attempt ${attemptsMade + 1} | Failed`);
     throw new Error(`Simulated failure for job ID ${id}`);
   }
@@ -24,7 +25,7 @@ export async function processWebhookJob({
     throw new Error(`Event with ID ${eventId} not found`);
   }
 
-  console.log(`event.id: ${event.id}, event.Type: ${event.eventType}`);
+  // console.log(`event.id: ${event.id}, event.Type: ${event.eventType}`);
 
   await markDeliverySuccess(event.id).catch((error) => {
     console.error(
@@ -35,7 +36,7 @@ export async function processWebhookJob({
     throw new Error(`Failed to mark delivery success for event ID ${event.id}`);
   });
 
-  console.log(`Delivered event with ID ${event.id} successfully`);
+  // console.log(`Delivered event with ID ${event.id} successfully`);
 
   console.log(`Job ${id} | Attempt ${attemptsMade + 1} | Success`);
 }
