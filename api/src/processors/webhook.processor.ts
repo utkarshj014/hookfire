@@ -1,5 +1,6 @@
 import { markDeliverySuccess } from "../services/delivery.service.js";
 import { getEventById } from "../services/event.service.js";
+import { deliverWebhookJob } from "../services/webhook.service.js";
 
 export async function processWebhookJob({
   data: { eventId },
@@ -12,12 +13,12 @@ export async function processWebhookJob({
 }) {
   // Simulate Failure
   // const randomFailure = Math.random() < 0.5;
-  const sureFailure = true;
+  // const sureFailure = true;
 
-  if (sureFailure) {
-    console.log(`Job ${id} | Attempt ${attemptsMade + 1} | Failed`);
-    throw new Error(`Simulated failure for job ID ${id}`);
-  }
+  // if (sureFailure) {
+  //   console.log(`Job ${id} | Attempt ${attemptsMade + 1} | Failed`);
+  //   throw new Error(`Simulated failure for job ID ${id}`);
+  // }
 
   const event = await getEventById(eventId);
 
@@ -26,6 +27,19 @@ export async function processWebhookJob({
   }
 
   // console.log(`event.id: ${event.id}, event.Type: ${event.eventType}`);
+
+  const webhookResult = await deliverWebhookJob(
+    event.eventType,
+    event.payload,
+  ).catch((error) => {
+    console.error(
+      `Failed to deliver webhook for event ID ${event.id}:`,
+      error.message,
+    );
+    throw error;
+  });
+
+  console.log(`Webhook delivered for event ID ${event.id}:`, webhookResult);
 
   await markDeliverySuccess(event.id).catch((error) => {
     console.error(
