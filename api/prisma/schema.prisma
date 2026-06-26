@@ -52,3 +52,13 @@ model WebhookEndpoint{
 
   @@map("webhook_endpoint")
 }
+
+model ProcessedWebhook{
+  id String @id @default(cuid())
+
+  deliveryId String @unique
+
+  createdAt DateTime @default(now())
+
+  @@map("processed-webhook")
+}

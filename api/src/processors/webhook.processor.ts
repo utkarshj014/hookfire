@@ -17,6 +17,7 @@ export async function processWebhookJob({
     endpointId,
     event.eventType,
     event.payload,
+    deliveryId,
   );
 
   console.log(

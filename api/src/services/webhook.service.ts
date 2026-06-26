@@ -11,6 +11,7 @@ export async function deliverWebhookJob(
   endpointId: string,
   eventType: string,
   payload: any,
+  deliveryId: string,
 ) {
   try {
     const body = {
@@ -32,6 +33,7 @@ export async function deliverWebhookJob(
     const response = await axios.post(webhookEndpoint.url, body, {
       headers: {
         "X-Hookfire-Signature": signature,
+        "X-Hookfire-Delivery-Id": deliveryId,
       },
     });
 

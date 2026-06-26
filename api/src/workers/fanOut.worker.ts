@@ -11,3 +11,7 @@ export const fanOutWorker = new Worker(
     connection: redisConnectionOptions,
   },
 );
+
+fanOutWorker.on("completed", (job) => {
+  console.log(`Job ${job.id} completed successfully`);
+});
