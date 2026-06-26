@@ -12,7 +12,8 @@ router.post("/", (req, res) => {
 
   const expectedSignature = generateSignature(
     JSON.stringify(req.body),
-    process.env.WEBHOOK_SECRET || "",
+    // process.env.WEBHOOK_SECRET || "",
+    "my-test-secret",
   );
 
   if (receivedSignature !== expectedSignature) {

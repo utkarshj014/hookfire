@@ -1,21 +1,35 @@
 import axios from "axios";
 import { generateSignature } from "../utils/signature.js";
+import { getEndpointById } from "./webhook-endpoint.service.js";
 
 const WEBHOOK_TARGET_URL =
   process.env.WEBHOOK_TARGET_URL || "http://localhost:3000/webhook-test";
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
 
-export async function deliverWebhookJob(eventType: string, payload: any) {
+export async function deliverWebhookJob(
+  endpointId: string,
+  eventType: string,
+  payload: any,
+) {
   try {
     const body = {
       eventType,
       payload,
     };
 
-    const signature = generateSignature(JSON.stringify(body), WEBHOOK_SECRET);
+    const webhookEndpoint = await getEndpointById(endpointId);
 
-    const response = await axios.post(WEBHOOK_TARGET_URL, body, {
+    if (!webhookEndpoint) {
+      throw new Error("No valid webhook-endpoint!");
+    }
+
+    const signature = generateSignature(
+      JSON.stringify(body),
+      webhookEndpoint.secret,
+    );
+
+    const response = await axios.post(webhookEndpoint.url, body, {
       headers: {
         "X-Hookfire-Signature": signature,
       },

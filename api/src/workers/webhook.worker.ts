@@ -26,7 +26,7 @@ webhookWorker.on("failed", async (job, err) => {
       `Job ${job?.id} failed with error: ${err.message}. Retrying...`,
     );
   } else {
-    await markDeliveryFailed(job.data.eventId, err.message);
+    await markDeliveryFailed(job.data.deliveryId, err.message);
 
     console.error(
       `Job ${job?.id} failed permanently with error: ${err.message}.`,

@@ -14,7 +14,7 @@ model Event {
   
   deliveries Delivery[]
 
-   @@map("event")
+  @@map("event")
 }
 
 model Delivery {
@@ -23,6 +23,10 @@ model Delivery {
   eventId    String
   event      Event    @relation(fields: [eventId], references: [id])
 
+  endpointId String
+  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id])
+
+
   status     String
   attempts   Int      @default(0)
 
@@ -30,6 +34,21 @@ model Delivery {
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-
+  
   @@map("delivery")
+}
+
+model WebhookEndpoint{
+  id String @id @default(cuid())
+
+  url String
+  secret String
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  deliveries Delivery[]
+
+  @@map("webhook_endpoint")
 }
