@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/index.ts",
-    "worker": "tsx watch src/worker.ts"
+    "webhook-worker": "tsx watch src/webhook-worker.entry.ts",
+    "fanOut-worker": "tsx watch src/fanOut-worker.entry.ts"
   },
   "keywords": [],
   "author": "",
