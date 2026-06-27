@@ -30,3 +30,45 @@ export async function markDeliveryFailed(id: string, errorMessage: string) {
     },
   });
 }
+
+export async function getAllDeliveries(page: number, limit: number) {
+  const [data, total] = await prisma.$transaction([
+    prisma.delivery.findMany({
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    }),
+
+    prisma.delivery.count(),
+  ]);
+
+  return { data, total };
+}
+
+export async function getDeliveryById(deliveryId: string) {
+  return prisma.delivery.findUnique({
+    where: { id: deliveryId },
+    include: {
+      event: true,
+      endpoint: true,
+    },
+  });
+}
+
+export async function getTotalDeliveriesCount() {
+  return prisma.delivery.count();
+}
+export async function getSuccessDeliveriesCount() {
+  return prisma.delivery.count({
+    where: {
+      status: "SUCCESS",
+    },
+  });
+}
+export async function getFailedDeliveriesCount() {
+  return prisma.delivery.count({
+    where: {
+      status: "FAILED",
+    },
+  });
+}

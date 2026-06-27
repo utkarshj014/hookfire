@@ -3,6 +3,7 @@ import { CreateEventSchema } from "../validators/event.validator.js";
 import {
   createEvent,
   getAllEvents,
+  getDeliveriesByEventId,
   getEventById,
 } from "../services/event.service.js";
 import type { Prisma } from "@prisma/client";
@@ -72,5 +73,34 @@ export async function getEventByIdHandler(
   } catch (error) {
     console.error(`Error fetching event with ID: ${req.params.id}:`, error);
     return res.status(500).json({ message: "Failed to fetch event" });
+  }
+}
+
+export async function getDeliveriesByEventIdHandler(
+  req: Request,
+  res: Response,
+): Promise<Response> {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ message: "Invalid or missing event ID" });
+    }
+
+    const deliveries = await getDeliveriesByEventId(id);
+
+    if (!deliveries) {
+      return res
+        .status(404)
+        .json({ message: "No deliveries found for this event ID" });
+    }
+
+    return res.status(200).json(deliveries);
+  } catch (error) {
+    console.error(
+      `Error fetching deliveries for event ID ${req.params.id}:`,
+      error,
+    );
+    return res.status(500).json({ message: "Failed to fetch deliveries" });
   }
 }

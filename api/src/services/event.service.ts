@@ -20,3 +20,15 @@ export async function getAllEvents() {
 export async function getEventById(id: string) {
   return prisma.event.findUnique({ where: { id } });
 }
+
+export async function getDeliveriesByEventId(eventId: string) {
+  return prisma.delivery.findMany({
+    where: {
+      eventId,
+    },
+  });
+}
+
+export async function getTotalEventsCount() {
+  return prisma.event.count();
+}
