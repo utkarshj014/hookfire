@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { getTotalEventsCount } from "../services/event.service.js";
 import {
   getTotalDeliveriesCount,
@@ -9,7 +9,8 @@ import {
 export async function getMetricsHandler(
   req: Request,
   res: Response,
-): Promise<Response> {
+  next: NextFunction,
+): Promise<any> {
   try {
     const totalEvents = await getTotalEventsCount();
 
@@ -33,7 +34,6 @@ export async function getMetricsHandler(
       },
     });
   } catch (error) {
-    console.error("Error in metrics");
-    return res.status(500).json({ message: "Internal server error" });
+    next(error);
   }
 }

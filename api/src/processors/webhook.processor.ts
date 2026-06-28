@@ -26,8 +26,6 @@ export async function processWebhookJob({
   );
 
   await markDeliverySuccess(deliveryId).catch((error) => {
-    console.error("Delivery marking as Success failed");
-
     throw new Error(
       `Failed to mark delivery as success for delivery ${deliveryId}. Error: ${error.message}`,
     );

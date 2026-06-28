@@ -4,8 +4,13 @@ import webhookTestRoutes from "./routes/webhook-test.routes.js";
 import deliveryRoutes from "./routes/delivery.routes.js";
 import metricRoutes from "./routes/metrics.routes.js";
 import cors, { type CorsOptions } from "cors";
+import { env } from "./config/env.js";
+import { loggingMiddleware } from "./middlewares/logging.middleware.js";
+import { errorMiddleware } from "./middlewares/error.middleware.js";
 
 const app: Application = express();
+
+app.use(loggingMiddleware);
 
 const allowedOrigins = ["http://localhost:5173"];
 
@@ -30,17 +35,27 @@ const corsOptions: CorsOptions = {
 
 app.use(cors(corsOptions));
 
+// Target ONLY the webhook-test routes to capture raw buffers
+app.use(
+  "/webhook-test",
+  express.raw({ type: "application/json" }),
+  webhookTestRoutes,
+);
+
+// Global JSON body parser for all other routes
 app.use(express.json());
 
 app.use("/events", eventRoutes);
-app.use("/webhook-test", webhookTestRoutes);
 app.use("/deliveries", deliveryRoutes);
 app.use("/metrics", metricRoutes);
 
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("Hookfire API RUNNING!!");
 });
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
+// Centralized error handler
+app.use(errorMiddleware);
+
+app.listen(env.PORT, () => {
+  console.log(`Server is running on port ${env.PORT}`);
 });

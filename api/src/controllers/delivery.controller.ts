@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import {
   getAllDeliveries,
   getDeliveryById,
@@ -7,7 +7,8 @@ import {
 export async function getAllDeliveriesHandler(
   req: Request,
   res: Response,
-): Promise<Response> {
+  next: NextFunction,
+): Promise<any> {
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(100, parseInt(req.query.limit as string, 10) || 20);
@@ -15,6 +16,8 @@ export async function getAllDeliveriesHandler(
     const { data, total } = await getAllDeliveries(page, limit);
 
     return res.status(200).json({
+      success: true,
+      message: "Deliveries retrieved successfully",
       data,
       meta: {
         totalItems: total,
@@ -27,33 +30,40 @@ export async function getAllDeliveriesHandler(
       },
     });
   } catch (error) {
-    console.error("Error fetching all deliveries:", error);
-    return res.status(500).json({ message: "Failed to fetch deliveries" });
+    next(error);
   }
 }
 
 export async function getDeliveryByIdHandler(
   req: Request,
   res: Response,
-): Promise<Response> {
+  next: NextFunction,
+): Promise<any> {
   try {
     const { id } = req.params;
 
     if (!id || typeof id !== "string") {
-      return res
-        .status(400)
-        .json({ message: "Invalid or missing delivery ID" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or missing delivery ID",
+      });
     }
 
     const delivery = await getDeliveryById(id);
 
     if (!delivery) {
-      return res.status(404).json({ message: "Delivery not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Delivery not found",
+      });
     }
 
-    return res.status(200).json(delivery);
+    return res.status(200).json({
+      success: true,
+      message: "Delivery retrieved successfully",
+      data: delivery,
+    });
   } catch (error) {
-    console.error(`Error fetching delivery with ID: ${req.params.id}:`, error);
-    return res.status(500).json({ message: "Failed to fetch delivery" });
+    next(error);
   }
 }

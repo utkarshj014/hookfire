@@ -2,11 +2,6 @@ import axios from "axios";
 import { generateSignature } from "../utils/signature.js";
 import { getEndpointById } from "./webhook-endpoint.service.js";
 
-const WEBHOOK_TARGET_URL =
-  process.env.WEBHOOK_TARGET_URL || "http://localhost:3000/webhook-test";
-
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || "";
-
 export async function deliverWebhookJob(
   endpointId: string,
   eventType: string,

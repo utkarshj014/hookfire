@@ -1,6 +1,6 @@
-import "dotenv/config";
+import { env } from "./env.js";
 
 export const redisConnectionOptions = {
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379", 10),
+  host: env.REDIS_HOST,
+  port: env.REDIS_PORT,
 };

@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { api } from "../api/client";
-import type { Metrics, Delivery, DeliveryDetail, PaginatedResponse } from "../types";
+import type {
+  Metrics,
+  Delivery,
+  DeliveryDetail,
+  PaginatedResponse,
+} from "../types";
 import { MetricCard } from "../components/MetricCard";
 import { DeliveryTable } from "../components/DeliveryTable";
 import { Pagination } from "../components/Pagination";
@@ -9,7 +14,8 @@ export const Dashboard: React.FC = () => {
   // Data States
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryDetail | null>(null);
+  const [selectedDelivery, setSelectedDelivery] =
+    useState<DeliveryDetail | null>(null);
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,10 +40,8 @@ export const Dashboard: React.FC = () => {
   const fetchMetrics = useCallback(async () => {
     try {
       setLoadingMetrics(true);
-      const response = await api.get<{ success: boolean; data: Metrics }>("/metrics");
-      if (response.data?.success) {
-        setMetrics(response.data.data);
-      }
+      const response = await api.get<{ data: Metrics }>("/metrics");
+      setMetrics(response.data.data);
     } catch (err) {
       console.error("Error fetching metrics:", err);
     } finally {
@@ -50,7 +54,7 @@ export const Dashboard: React.FC = () => {
     try {
       setLoadingDeliveries(true);
       const response = await api.get<PaginatedResponse<Delivery>>(
-        `/deliveries?page=${page}&limit=${limit}`
+        `/deliveries?page=${page}&limit=${limit}`,
       );
       const { data, meta } = response.data;
       setDeliveries(data);
@@ -68,7 +72,10 @@ export const Dashboard: React.FC = () => {
   // Consolidated refresh trigger
   const triggerRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchMetrics(), fetchDeliveries(currentPage, itemsPerPage)]);
+    await Promise.all([
+      fetchMetrics(),
+      fetchDeliveries(currentPage, itemsPerPage),
+    ]);
     setIsRefreshing(false);
   }, [fetchMetrics, fetchDeliveries, currentPage, itemsPerPage]);
 
@@ -92,11 +99,15 @@ export const Dashboard: React.FC = () => {
     try {
       setLoadingDetail(true);
       setErrorDetail(null);
-      const response = await api.get<DeliveryDetail>(`/deliveries/${id}`);
-      setSelectedDelivery(response.data);
+      const response = await api.get<{ data: DeliveryDetail }>(
+        `/deliveries/${id}`,
+      );
+      setSelectedDelivery(response.data.data);
     } catch (err: any) {
       console.error("Error fetching delivery details:", err);
-      setErrorDetail(err.response?.data?.message || "Failed to load delivery details");
+      setErrorDetail(
+        err.response?.data?.message || "Failed to load delivery details",
+      );
     } finally {
       setLoadingDetail(false);
     }
@@ -169,18 +180,36 @@ export const Dashboard: React.FC = () => {
       <section className="metric-grid">
         <MetricCard
           title="Total Events"
-          value={loadingMetrics && !metrics ? "..." : metrics?.totalEvents ?? 0}
+          value={
+            loadingMetrics && !metrics ? "..." : (metrics?.totalEvents ?? 0)
+          }
           icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
             </svg>
           }
         />
         <MetricCard
           title="Total Deliveries"
-          value={loadingMetrics && !metrics ? "..." : metrics?.totalDeliveries ?? 0}
+          value={
+            loadingMetrics && !metrics ? "..." : (metrics?.totalDeliveries ?? 0)
+          }
           icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
               <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
               <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
               <line x1="6" y1="6" x2="6.01" y2="6" />
@@ -190,10 +219,21 @@ export const Dashboard: React.FC = () => {
         />
         <MetricCard
           title="Successful"
-          value={loadingMetrics && !metrics ? "..." : metrics?.successfulDeliveries ?? 0}
+          value={
+            loadingMetrics && !metrics
+              ? "..."
+              : (metrics?.successfulDeliveries ?? 0)
+          }
           type="success"
           icon={
-            <svg width="20" height="20" fill="none" stroke="var(--success)" strokeWidth="2" viewBox="0 0 24 24">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="var(--success)"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
@@ -201,10 +241,21 @@ export const Dashboard: React.FC = () => {
         />
         <MetricCard
           title="Failed"
-          value={loadingMetrics && !metrics ? "..." : metrics?.failedDeliveries ?? 0}
+          value={
+            loadingMetrics && !metrics
+              ? "..."
+              : (metrics?.failedDeliveries ?? 0)
+          }
           type="danger"
           icon={
-            <svg width="20" height="20" fill="none" stroke="var(--danger)" strokeWidth="2" viewBox="0 0 24 24">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="var(--danger)"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
               <circle cx="12" cy="12" r="10" />
               <line x1="15" y1="9" x2="9" y2="15" />
               <line x1="9" y1="9" x2="15" y2="15" />
@@ -222,7 +273,14 @@ export const Dashboard: React.FC = () => {
           progressBar
           progressValue={metrics?.successRate ?? 0}
           icon={
-            <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
               <path d="M12 20V10" />
               <path d="M18 20V4" />
               <path d="M6 20v-4" />
@@ -254,7 +312,15 @@ export const Dashboard: React.FC = () => {
         {/* Deliveries Table */}
         {loadingDeliveries && deliveries.length === 0 ? (
           <div className="loader-container">
-            <svg className="animate-spin" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="3">
+            <svg
+              className="animate-spin"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--accent-primary)"
+              strokeWidth="3"
+            >
               <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.05)" />
               <path d="M12 2a10 10 0 0 1 10 10" />
             </svg>
@@ -288,13 +354,26 @@ export const Dashboard: React.FC = () => {
               <div className="modal-title">
                 <h2>Delivery Details</h2>
                 {selectedDelivery && (
-                  <span className={`badge ${selectedDelivery.status.toUpperCase() === "SUCCESS" ? "badge-success" : "badge-failed"}`}>
+                  <span
+                    className={`badge ${selectedDelivery.status.toUpperCase() === "SUCCESS" ? "badge-success" : "badge-failed"}`}
+                  >
                     {selectedDelivery.status}
                   </span>
                 )}
               </div>
-              <button className="modal-close-btn" onClick={closeModal} title="Close Modal">
-                <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <button
+                className="modal-close-btn"
+                onClick={closeModal}
+                title="Close Modal"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
@@ -304,8 +383,21 @@ export const Dashboard: React.FC = () => {
             <div className="modal-body">
               {loadingDetail ? (
                 <div className="loader-container">
-                  <svg className="animate-spin" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="3">
-                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.05)" />
+                  <svg
+                    className="animate-spin"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--accent-primary)"
+                    strokeWidth="3"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="rgba(255,255,255,0.05)"
+                    />
                     <path d="M12 2a10 10 0 0 1 10 10" />
                   </svg>
                   <span>Fetching full delivery logs...</span>
@@ -320,19 +412,27 @@ export const Dashboard: React.FC = () => {
                   <div className="grid-cols-2">
                     <div className="detail-item">
                       <span className="detail-label">Delivery ID</span>
-                      <span className="detail-val mono-text">{selectedDelivery.id}</span>
+                      <span className="detail-val mono-text">
+                        {selectedDelivery.id}
+                      </span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Attempts</span>
-                      <span className="detail-val">{selectedDelivery.attempts}</span>
+                      <span className="detail-val">
+                        {selectedDelivery.attempts}
+                      </span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Created At</span>
-                      <span className="detail-val">{new Date(selectedDelivery.createdAt).toLocaleString()}</span>
+                      <span className="detail-val">
+                        {new Date(selectedDelivery.createdAt).toLocaleString()}
+                      </span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Updated At</span>
-                      <span className="detail-val">{new Date(selectedDelivery.updatedAt).toLocaleString()}</span>
+                      <span className="detail-val">
+                        {new Date(selectedDelivery.updatedAt).toLocaleString()}
+                      </span>
                     </div>
                   </div>
 
@@ -341,7 +441,10 @@ export const Dashboard: React.FC = () => {
                     <h3 className="modal-section-title">Webhook Endpoint</h3>
                     <div className="detail-item">
                       <span className="detail-label">Target URL</span>
-                      <span className="detail-val mono-text" style={{ color: "var(--accent-secondary)" }}>
+                      <span
+                        className="detail-val mono-text"
+                        style={{ color: "var(--accent-secondary)" }}
+                      >
                         {selectedDelivery.endpoint?.url || "N/A"}
                       </span>
                     </div>
@@ -350,14 +453,22 @@ export const Dashboard: React.FC = () => {
                   {/* Event details */}
                   <div>
                     <h3 className="modal-section-title">Event Information</h3>
-                    <div className="grid-cols-2" style={{ marginBottom: "0.75rem" }}>
+                    <div
+                      className="grid-cols-2"
+                      style={{ marginBottom: "0.75rem" }}
+                    >
                       <div className="detail-item">
                         <span className="detail-label">Event ID</span>
-                        <span className="detail-val mono-text">{selectedDelivery.eventId}</span>
+                        <span className="detail-val mono-text">
+                          {selectedDelivery.eventId}
+                        </span>
                       </div>
                       <div className="detail-item">
                         <span className="detail-label">Event Type</span>
-                        <span className="detail-val mono-text" style={{ color: "var(--accent-primary)" }}>
+                        <span
+                          className="detail-val mono-text"
+                          style={{ color: "var(--accent-primary)" }}
+                        >
                           {selectedDelivery.event?.eventType || "N/A"}
                         </span>
                       </div>
@@ -378,7 +489,11 @@ export const Dashboard: React.FC = () => {
                   <div>
                     <h3 className="modal-section-title">Raw Event Payload</h3>
                     <pre className="code-viewer">
-                      {JSON.stringify(selectedDelivery.event?.payload || {}, null, 2)}
+                      {JSON.stringify(
+                        selectedDelivery.event?.payload || {},
+                        null,
+                        2,
+                      )}
                     </pre>
                   </div>
                 </>

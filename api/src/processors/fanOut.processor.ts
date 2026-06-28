@@ -25,7 +25,7 @@ export async function processFanOutJob({
         `Failed to initiate webhook flow for Endpoint ${endpoint.id}:`,
         result.reason,
       );
-      // Note: You can add an optional database update here to mark this delivery row as "SETUP_FAILED"
+      // Note: We can add an optional database update here to mark this delivery row as "SETUP_FAILED"
     }
   });
 }

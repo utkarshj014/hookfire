@@ -1,7 +1,7 @@
-import "dotenv/config";
 import { Router } from "express";
-import { generateSignature } from "../utils/signature.js";
+import { verifySignature } from "../utils/signature.js";
 import { acquireIdempotencyKey } from "../services/idempotency.service.js";
+import { env } from "../config/env.js";
 
 const router = Router();
 
@@ -25,20 +25,22 @@ router.post("/", async (req, res) => {
 
   console.log("New webhook received.");
 
-  const receivedSignature = req.header("X-Hookfire-Signature");
+  const receivedSignature = req.header("X-Hookfire-Signature") || "";
 
-  const expectedSignature = generateSignature(
-    JSON.stringify(req.body),
-    // process.env.WEBHOOK_SECRET || "",
-    "my-test-secret",
+  const isValid = verifySignature(
+    req.body,
+    env.WEBHOOK_SECRET || "my-test-secret",
+    receivedSignature,
   );
 
-  if (receivedSignature !== expectedSignature) {
+  if (!isValid) {
     console.log("Signature mismatch! Webhook request may not be authentic.");
     return res
       .status(401)
       .json({ success: false, message: "Invalid signature" });
   }
+
+  const payload = JSON.parse(req.body.toString("utf-8"));
 
   console.log("Webhook request is authentic.");
 
