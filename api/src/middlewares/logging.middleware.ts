@@ -1,7 +1,8 @@
 import { pinoHttp } from "pino-http";
+import { logger } from "../lib/logger.js";
 
 export const loggingMiddleware = pinoHttp({
-  // Clean default logger options
+  logger,
   customLogLevel: function (req, res, err) {
     if (res.statusCode >= 500 || err) {
       return "error";

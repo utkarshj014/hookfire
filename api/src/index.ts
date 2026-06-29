@@ -3,6 +3,7 @@ import eventRoutes from "./routes/event.routes.js";
 import webhookTestRoutes from "./routes/webhook-test.routes.js";
 import deliveryRoutes from "./routes/delivery.routes.js";
 import metricRoutes from "./routes/metrics.routes.js";
+import dlqRoutes from "./routes/dlq.routes.js";
 import cors, { type CorsOptions } from "cors";
 import { env } from "./config/env.js";
 import { loggingMiddleware } from "./middlewares/logging.middleware.js";
@@ -48,6 +49,7 @@ app.use(express.json());
 app.use("/events", eventRoutes);
 app.use("/deliveries", deliveryRoutes);
 app.use("/metrics", metricRoutes);
+app.use("/dlq", dlqRoutes);
 
 app.get("/", (_req, res) => {
   res.send("Hookfire API RUNNING!!");

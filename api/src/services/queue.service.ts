@@ -10,6 +10,7 @@ export async function enqueueWebhookJob(
     "deliver-webhook",
     { eventId, endpointId, deliveryId },
     {
+      jobId: deliveryId,
       attempts: 3,
       backoff: {
         type: "exponential",

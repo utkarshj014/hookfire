@@ -5,6 +5,7 @@ import type {
   Delivery,
   DeliveryDetail,
   PaginatedResponse,
+  QueueMetrics,
 } from "../types";
 import { MetricCard } from "../components/MetricCard";
 import { DeliveryTable } from "../components/DeliveryTable";
@@ -13,6 +14,7 @@ import { Pagination } from "../components/Pagination";
 export const Dashboard: React.FC = () => {
   // Data States
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [queueMetrics, setQueueMetrics] = useState<QueueMetrics | null>(null);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [selectedDelivery, setSelectedDelivery] =
     useState<DeliveryDetail | null>(null);
@@ -30,11 +32,13 @@ export const Dashboard: React.FC = () => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Loading States
+  // Loading & Retry States
   const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [loadingDeliveries, setLoadingDeliveries] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retrySuccessMessage, setRetrySuccessMessage] = useState<string | null>(null);
 
   // Fetch metrics API
   const fetchMetrics = useCallback(async () => {
@@ -49,12 +53,23 @@ export const Dashboard: React.FC = () => {
     }
   }, []);
 
+  // Fetch queue metrics API
+  const fetchQueueMetrics = useCallback(async () => {
+    try {
+      const response = await api.get<{ data: QueueMetrics }>("/metrics/queues");
+      setQueueMetrics(response.data.data);
+    } catch (err) {
+      console.error("Error fetching queue metrics:", err);
+    }
+  }, []);
+
   // Fetch deliveries API
-  const fetchDeliveries = useCallback(async (page: number, limit: number) => {
+  const fetchDeliveries = useCallback(async (page: number, limit: number, status: string) => {
     try {
       setLoadingDeliveries(true);
+      const statusParam = status !== "ALL" ? `&status=${status}` : "";
       const response = await api.get<PaginatedResponse<Delivery>>(
-        `/deliveries?page=${page}&limit=${limit}`,
+        `/deliveries?page=${page}&limit=${limit}${statusParam}`,
       );
       const { data, meta } = response.data;
       setDeliveries(data);
@@ -74,16 +89,18 @@ export const Dashboard: React.FC = () => {
     setIsRefreshing(true);
     await Promise.all([
       fetchMetrics(),
-      fetchDeliveries(currentPage, itemsPerPage),
+      fetchQueueMetrics(),
+      fetchDeliveries(currentPage, itemsPerPage, statusFilter),
     ]);
     setIsRefreshing(false);
-  }, [fetchMetrics, fetchDeliveries, currentPage, itemsPerPage]);
+  }, [fetchMetrics, fetchQueueMetrics, fetchDeliveries, currentPage, itemsPerPage, statusFilter]);
 
   // Initial load & automatic pagination trigger
   useEffect(() => {
     fetchMetrics();
-    fetchDeliveries(currentPage, itemsPerPage);
-  }, [currentPage, itemsPerPage, fetchMetrics, fetchDeliveries]);
+    fetchQueueMetrics();
+    fetchDeliveries(currentPage, itemsPerPage, statusFilter);
+  }, [currentPage, itemsPerPage, statusFilter, fetchMetrics, fetchQueueMetrics, fetchDeliveries]);
 
   // Auto-refresh interval
   useEffect(() => {
@@ -94,11 +111,18 @@ export const Dashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [autoRefresh, triggerRefresh]);
 
+  // Reset page when filter changes
+  const handleFilterChange = (newStatus: string) => {
+    setStatusFilter(newStatus);
+    setCurrentPage(1);
+  };
+
   // Fetch delivery detail on-demand
   const handleRowClick = async (id: string) => {
     try {
       setLoadingDetail(true);
       setErrorDetail(null);
+      setRetrySuccessMessage(null);
       const response = await api.get<{ data: DeliveryDetail }>(
         `/deliveries/${id}`,
       );
@@ -113,17 +137,33 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // DLQ Retry Trigger
+  const handleRetryDelivery = async (deliveryId: string) => {
+    try {
+      setIsRetrying(true);
+      setRetrySuccessMessage(null);
+      const response = await api.post<{ message: string }>(`/dlq/${deliveryId}/retry`);
+      setRetrySuccessMessage(response.data.message);
+      
+      // Auto refresh list/detail
+      setTimeout(() => {
+        handleRowClick(deliveryId);
+        triggerRefresh();
+      }, 1000);
+    } catch (err: any) {
+      console.error("Failed to retry delivery:", err);
+      alert(err.response?.data?.message || "Failed to retry delivery");
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   // Close modal
   const closeModal = () => {
     setSelectedDelivery(null);
     setErrorDetail(null);
+    setRetrySuccessMessage(null);
   };
-
-  // Local Filter Logic
-  const filteredDeliveries = deliveries.filter((d) => {
-    if (statusFilter === "ALL") return true;
-    return d.status.toUpperCase() === statusFilter;
-  });
 
   return (
     <div className="dashboard-container">
@@ -289,6 +329,112 @@ export const Dashboard: React.FC = () => {
         />
       </section>
 
+      {/* Queue Observability Panel */}
+      <section
+        className="animate-fade-in"
+        style={{
+          background: "var(--bg-secondary)",
+          border: "1px solid var(--border-color)",
+          borderRadius: "var(--radius-lg)",
+          padding: "1.25rem 1.5rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "1rem",
+              fontWeight: 700,
+              color: "var(--text-primary)",
+            }}
+          >
+            Queue Observability (BullMQ)
+          </h2>
+          <span
+            className="badge badge-pending"
+            style={{ fontSize: "0.75rem" }}
+          >
+            Active Webhook Workers
+          </span>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: "1rem",
+          }}
+        >
+          {[
+            {
+              label: "Active",
+              value: queueMetrics?.active ?? 0,
+              color: "var(--accent-secondary)",
+            },
+            {
+              label: "Waiting",
+              value: queueMetrics?.waiting ?? 0,
+              color: "var(--warning)",
+            },
+            {
+              label: "Delayed",
+              value: queueMetrics?.delayed ?? 0,
+              color: "var(--accent-primary)",
+            },
+            {
+              label: "Completed",
+              value: queueMetrics?.completed ?? 0,
+              color: "var(--success)",
+            },
+            {
+              label: "Failed (DLQ)",
+              value: queueMetrics?.failed ?? 0,
+              color: "var(--danger)",
+            },
+          ].map((q) => (
+            <div
+              key={q.label}
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.015)",
+                border: "1px solid var(--border-color)",
+                borderRadius: "var(--radius-md)",
+                padding: "0.75rem 1rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.25rem",
+                textAlign: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-secondary)",
+                  fontWeight: 500,
+                }}
+              >
+                {q.label}
+              </span>
+              <span
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: 700,
+                  color: q.color,
+                }}
+              >
+                {q.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Table Section */}
       <section className="content-section">
         {/* Status Filters */}
@@ -298,14 +444,14 @@ export const Dashboard: React.FC = () => {
               <button
                 key={tab}
                 className={`filter-tab ${statusFilter === tab ? "active" : ""}`}
-                onClick={() => setStatusFilter(tab)}
+                onClick={() => handleFilterChange(tab)}
               >
                 {tab}
               </button>
             ))}
           </div>
           <span style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
-            Showing local status page filters
+            Server-side filter query active
           </span>
         </div>
 
@@ -328,7 +474,7 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : (
           <DeliveryTable
-            deliveries={filteredDeliveries}
+            deliveries={deliveries}
             onRowClick={handleRowClick}
           />
         )}
@@ -351,7 +497,15 @@ export const Dashboard: React.FC = () => {
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title">
+              <div
+                className="modal-title"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "1rem",
+                  width: "100%",
+                }}
+              >
                 <h2>Delivery Details</h2>
                 {selectedDelivery && (
                   <span
@@ -359,6 +513,21 @@ export const Dashboard: React.FC = () => {
                   >
                     {selectedDelivery.status}
                   </span>
+                )}
+                {selectedDelivery && selectedDelivery.status === "FAILED" && (
+                  <button
+                    className="btn btn-primary"
+                    style={{
+                      fontSize: "0.75rem",
+                      padding: "0.25rem 0.75rem",
+                      marginLeft: "auto",
+                      marginRight: "1rem",
+                    }}
+                    onClick={() => handleRetryDelivery(selectedDelivery.id)}
+                    disabled={isRetrying}
+                  >
+                    {isRetrying ? "Retrying..." : "Retry Webhook (DLQ)"}
+                  </button>
                 )}
               </div>
               <button
@@ -381,6 +550,23 @@ export const Dashboard: React.FC = () => {
             </div>
 
             <div className="modal-body">
+              {/* Toast messages */}
+              {retrySuccessMessage && (
+                <div
+                  style={{
+                    backgroundColor: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid var(--success)",
+                    color: "var(--success)",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "0.875rem",
+                    textAlign: "left",
+                  }}
+                >
+                  {retrySuccessMessage}
+                </div>
+              )}
+
               {loadingDetail ? (
                 <div className="loader-container">
                   <svg
@@ -429,9 +615,13 @@ export const Dashboard: React.FC = () => {
                       </span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Updated At</span>
+                      <span className="detail-label">Last Attempt At</span>
                       <span className="detail-val">
-                        {new Date(selectedDelivery.updatedAt).toLocaleString()}
+                        {selectedDelivery.lastAttemptAt
+                          ? new Date(
+                              selectedDelivery.lastAttemptAt,
+                            ).toLocaleString()
+                          : "N/A"}
                       </span>
                     </div>
                   </div>
@@ -476,44 +666,76 @@ export const Dashboard: React.FC = () => {
                   </div>
 
                   {/* Attempt Timeline */}
-                  {selectedDelivery.attempts && selectedDelivery.attempts.length > 0 && (
-                    <div>
-                      <h3 className="modal-section-title">Attempt History</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                        {selectedDelivery.attempts.map((attempt) => (
-                          <div
-                            key={attempt.id}
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              backgroundColor: "rgba(255, 255, 255, 0.015)",
-                              border: "1px solid var(--border-color)",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "var(--radius-md)",
-                            }}
-                          >
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", textAlign: "left" }}>
-                              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                                Attempt #{attempt.attemptNumber}
-                              </span>
-                              <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                                {new Date(attempt.startedAt).toLocaleString()}
-                              </span>
-                              {attempt.errorMessage && (
-                                <span style={{ fontSize: "0.75rem", color: "var(--danger)", wordBreak: "break-word" }}>
-                                  {attempt.errorMessage}
+                  {selectedDelivery.attempts &&
+                    selectedDelivery.attempts.length > 0 && (
+                      <div>
+                        <h3 className="modal-section-title">Attempt History</h3>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "0.5rem",
+                          }}
+                        >
+                          {selectedDelivery.attempts.map((attempt) => (
+                            <div
+                              key={attempt.id}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                backgroundColor: "rgba(255, 255, 255, 0.015)",
+                                border: "1px solid var(--border-color)",
+                                padding: "0.75rem 1rem",
+                                borderRadius: "var(--radius-md)",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "0.25rem",
+                                  textAlign: "left",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontWeight: 600,
+                                    fontSize: "0.875rem",
+                                  }}
+                                >
+                                  Attempt #{attempt.attemptNumber}
                                 </span>
-                              )}
+                                <span
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "var(--text-secondary)",
+                                  }}
+                                >
+                                  {new Date(attempt.startedAt).toLocaleString()}
+                                </span>
+                                {attempt.errorMessage && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.75rem",
+                                      color: "var(--danger)",
+                                      wordBreak: "break-word",
+                                    }}
+                                  >
+                                    {attempt.errorMessage}
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                className={`badge ${attempt.status.toUpperCase() === "SUCCESS" ? "badge-success" : "badge-failed"}`}
+                              >
+                                {attempt.status}
+                              </span>
                             </div>
-                            <span className={`badge ${attempt.status.toUpperCase() === "SUCCESS" ? "badge-success" : "badge-failed"}`}>
-                              {attempt.status}
-                            </span>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Error Banner */}
                   {selectedDelivery.latestError && (

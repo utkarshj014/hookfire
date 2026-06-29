@@ -5,6 +5,7 @@ import {
   getSuccessDeliveriesCount,
   getFailedDeliveriesCount,
 } from "../services/delivery.service.js";
+import { webhookQueue } from "../queues/webhook.queue.js";
 
 export async function getMetricsHandler(
   req: Request,
@@ -31,6 +32,30 @@ export async function getMetricsHandler(
         successfulDeliveries,
         failedDeliveries,
         successRate,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getQueueMetricsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> {
+  try {
+    const counts = await webhookQueue.getJobCounts();
+
+    return res.status(200).json({
+      success: true,
+      message: "Queue metrics retrieved successfully",
+      data: {
+        waiting: counts.waiting || 0,
+        active: counts.active || 0,
+        completed: counts.completed || 0,
+        failed: counts.failed || 0,
+        delayed: counts.delayed || 0,
       },
     });
   } catch (error) {

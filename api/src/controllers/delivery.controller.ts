@@ -12,8 +12,9 @@ export async function getAllDeliveriesHandler(
   try {
     const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
     const limit = Math.min(100, parseInt(req.query.limit as string, 10) || 20);
+    const status = req.query.status as string | undefined;
 
-    const { data, total } = await getAllDeliveries(page, limit);
+    const { data, total } = await getAllDeliveries(page, limit, status);
 
     return res.status(200).json({
       success: true,

@@ -20,8 +20,17 @@ export interface Delivery {
   status: "PENDING" | "SUCCESS" | "FAILED" | string;
   attemptCount: number;
   latestError: string | null;
+  lastAttemptAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface QueueMetrics {
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
 }
 
 export interface DeliveryAttempt {

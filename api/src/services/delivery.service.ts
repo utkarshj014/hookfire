@@ -35,6 +35,7 @@ export async function recordAttemptSuccess(attemptId: string, deliveryId: string
         status: "SUCCESS",
         attemptCount: { increment: 1 },
         latestError: null,
+        lastAttemptAt: new Date(),
       },
     }),
   ]);
@@ -60,19 +61,23 @@ export async function recordAttemptFailure(
         status: isFinalAttempt ? "FAILED" : "PENDING",
         attemptCount: { increment: 1 },
         latestError: errorMessage,
+        lastAttemptAt: new Date(),
       },
     }),
   ]);
 }
 
-export async function getAllDeliveries(page: number, limit: number) {
+export async function getAllDeliveries(page: number, limit: number, status?: string) {
+  const where = status && status !== "ALL" ? { status: status.toUpperCase() } : {};
+
   const [data, total] = await prisma.$transaction([
     prisma.delivery.findMany({
+      where,
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { createdAt: "desc" },
     }),
-    prisma.delivery.count(),
+    prisma.delivery.count({ where }),
   ]);
 
   return { data, total };
