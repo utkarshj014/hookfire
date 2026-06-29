@@ -5,6 +5,8 @@ const envSchema = z.object({
   DATABASE_URL: z.url(),
   REDIS_HOST: z.string().min(1),
   REDIS_PORT: z.coerce.number().int().positive().default(6379),
+  REDIS_PASSWORD: z.string().default(""),
+  ENCRYPTION_KEY: z.string().length(32),
   WEBHOOK_SECRET: z.string().min(1),
   PORT: z.coerce.number().int().positive().default(3000),
   NODE_ENV: z

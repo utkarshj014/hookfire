@@ -1,6 +1,7 @@
 import axios from "axios";
 import { generateSignature } from "../utils/signature.js";
 import { getEndpointById } from "./webhook-endpoint.service.js";
+import { decryptSecret } from "../utils/crypto.js";
 
 export async function deliverWebhookJob(
   endpointId: string,
@@ -20,9 +21,15 @@ export async function deliverWebhookJob(
       throw new Error("No valid webhook-endpoint!");
     }
 
+    const decryptedSecret = decryptSecret(
+      webhookEndpoint.secretEncrypted,
+      webhookEndpoint.secretIv,
+      webhookEndpoint.secretTag,
+    );
+
     const signature = generateSignature(
       JSON.stringify(body),
-      webhookEndpoint.secret,
+      decryptedSecret,
     );
 
     const response = await axios.post(webhookEndpoint.url, body, {

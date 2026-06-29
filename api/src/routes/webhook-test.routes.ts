@@ -7,7 +7,8 @@ const router = Router();
 
 router.post("/", async (req, res) => {
   console.log("Webhook test route is working!");
-  console.log("Request body:", req.body);
+
+  const rawBody = req.body;
 
   const deliveryId = req.header("X-Hookfire-Delivery-Id");
 
@@ -27,11 +28,16 @@ router.post("/", async (req, res) => {
 
   const receivedSignature = req.header("X-Hookfire-Signature") || "";
 
-  const isValid = verifySignature(
-    req.body,
-    env.WEBHOOK_SECRET || "my-test-secret",
-    receivedSignature,
-  );
+  // 1. Try active secret
+  let isValid = verifySignature(rawBody, env.WEBHOOK_SECRET, receivedSignature);
+
+  // 2. Try previous secret rotation (fallback to my-test-secret)
+  if (!isValid) {
+    console.log(
+      "Active signature mismatch, attempting previous secret rotation check...",
+    );
+    isValid = verifySignature(rawBody, "my-test-secret", receivedSignature);
+  }
 
   if (!isValid) {
     console.log("Signature mismatch! Webhook request may not be authentic.");
@@ -40,7 +46,12 @@ router.post("/", async (req, res) => {
       .json({ success: false, message: "Invalid signature" });
   }
 
-  const payload = JSON.parse(req.body.toString("utf-8"));
+  try {
+    const parsedPayload = JSON.parse(rawBody.toString("utf8"));
+    console.log("Request body payload:", parsedPayload);
+  } catch (err) {
+    console.log("Request body is not valid JSON:", rawBody.toString("utf8"));
+  }
 
   console.log("Webhook request is authentic.");
 

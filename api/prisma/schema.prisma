@@ -56,7 +56,16 @@ model WebhookEndpoint{
   id String @id @default(cuid())
 
   url String
-  secret String
+  
+  secretEncrypted String
+  secretIv        String
+  secretTag       String
+
+  previousSecretEncrypted String?
+  previousSecretIv        String?
+  previousSecretTag       String?
+
+  rotatedAt       DateTime?
 
   isActive Boolean @default(true)
 
