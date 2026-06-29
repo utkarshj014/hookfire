@@ -84,7 +84,7 @@ export const DeliveryTable: React.FC<DeliveryTableProps> = ({
                 <span className="mono-text">{delivery.endpointId.substring(0, 8)}...</span>
               </td>
               <td style={{ textAlign: "center" }}>
-                <span style={{ fontWeight: 600 }}>{delivery.attempts}</span>
+                <span style={{ fontWeight: 600 }}>{delivery.attemptCount}</span>
               </td>
               <td>{getStatusBadge(delivery.status)}</td>
               <td>

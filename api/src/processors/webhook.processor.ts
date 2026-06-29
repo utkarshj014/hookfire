@@ -1,35 +1,46 @@
-import { markDeliverySuccess } from "../services/delivery.service.js";
+import type { Job } from "bullmq";
+import {
+  createDeliveryAttempt,
+  recordAttemptSuccess,
+  recordAttemptFailure,
+} from "../services/delivery.service.js";
 import { getEventById } from "../services/event.service.js";
 import { deliverWebhookJob } from "../services/webhook.service.js";
 
-export async function processWebhookJob({
-  data: { eventId, endpointId, deliveryId },
-}: {
-  data: { eventId: string; endpointId: string; deliveryId: string };
-}) {
+export async function processWebhookJob(job: Job) {
+  const { eventId, endpointId, deliveryId } = job.data;
+
   const event = await getEventById(eventId);
 
   if (!event) {
     throw new Error(`Event with ID ${eventId} not found`);
   }
 
-  const webhookResult = await deliverWebhookJob(
-    endpointId,
-    event.eventType,
-    event.payload,
-    deliveryId,
-  );
+  const attemptNumber = job.attemptsMade + 1;
+  const maxAttempts = job.opts.attempts ?? 3;
 
-  console.log(
-    `Webhook delivered for event ID ${event.id} at ${endpointId} successfully`,
-    webhookResult,
-  );
+  const attempt = await createDeliveryAttempt(deliveryId, attemptNumber);
 
-  await markDeliverySuccess(deliveryId).catch((error) => {
-    throw new Error(
-      `Failed to mark delivery as success for delivery ${deliveryId}. Error: ${error.message}`,
+  try {
+    const webhookResult = await deliverWebhookJob(
+      endpointId,
+      event.eventType,
+      event.payload,
+      deliveryId,
     );
-  });
 
-  console.log(`Delivery ${deliveryId} marked as Success!`);
+    console.log(
+      `Webhook delivered for event ID ${event.id} at ${endpointId} successfully`,
+      webhookResult,
+    );
+
+    await recordAttemptSuccess(attempt.id, deliveryId);
+  } catch (error: any) {
+    const isFinalAttempt = attemptNumber >= maxAttempts;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    await recordAttemptFailure(attempt.id, deliveryId, errorMessage, isFinalAttempt);
+
+    throw error;
+  }
 }

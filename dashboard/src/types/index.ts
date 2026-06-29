@@ -18,15 +18,26 @@ export interface Delivery {
   eventId: string;
   endpointId: string;
   status: "PENDING" | "SUCCESS" | "FAILED" | string;
-  attempts: number;
-  errorMessage: string | null;
+  attemptCount: number;
+  latestError: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DeliveryAttempt {
+  id: string;
+  deliveryId: string;
+  attemptNumber: number;
+  status: "SUCCESS" | "FAILED" | "PENDING" | string;
+  errorMessage: string | null;
+  startedAt: string;
+  finishedAt: string;
 }
 
 export interface DeliveryDetail extends Delivery {
   event: Event;
   endpoint: WebhookEndpoint;
+  attempts: DeliveryAttempt[];
 }
 
 export interface Metrics {
@@ -38,8 +49,6 @@ export interface Metrics {
 }
 
 export interface PaginatedResponse<T> {
-  success: boolean;
-  message: string;
   data: T[];
   meta: {
     totalItems: number;

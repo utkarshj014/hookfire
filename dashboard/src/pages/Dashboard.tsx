@@ -417,9 +417,9 @@ export const Dashboard: React.FC = () => {
                       </span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Attempts</span>
+                      <span className="detail-label">Attempt Count</span>
                       <span className="detail-val">
-                        {selectedDelivery.attempts}
+                        {selectedDelivery.attemptCount}
                       </span>
                     </div>
                     <div className="detail-item">
@@ -475,12 +475,52 @@ export const Dashboard: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Attempt Timeline */}
+                  {selectedDelivery.attempts && selectedDelivery.attempts.length > 0 && (
+                    <div>
+                      <h3 className="modal-section-title">Attempt History</h3>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                        {selectedDelivery.attempts.map((attempt) => (
+                          <div
+                            key={attempt.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              backgroundColor: "rgba(255, 255, 255, 0.015)",
+                              border: "1px solid var(--border-color)",
+                              padding: "0.75rem 1rem",
+                              borderRadius: "var(--radius-md)",
+                            }}
+                          >
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", textAlign: "left" }}>
+                              <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                                Attempt #{attempt.attemptNumber}
+                              </span>
+                              <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                                {new Date(attempt.startedAt).toLocaleString()}
+                              </span>
+                              {attempt.errorMessage && (
+                                <span style={{ fontSize: "0.75rem", color: "var(--danger)", wordBreak: "break-word" }}>
+                                  {attempt.errorMessage}
+                                </span>
+                              )}
+                            </div>
+                            <span className={`badge ${attempt.status.toUpperCase() === "SUCCESS" ? "badge-success" : "badge-failed"}`}>
+                              {attempt.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Error Banner */}
-                  {selectedDelivery.errorMessage && (
+                  {selectedDelivery.latestError && (
                     <div>
                       <h3 className="modal-section-title">Error Logs</h3>
                       <div className="error-banner">
-                        {selectedDelivery.errorMessage}
+                        {selectedDelivery.latestError}
                       </div>
                     </div>
                   )}

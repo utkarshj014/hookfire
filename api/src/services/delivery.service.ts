@@ -6,29 +6,63 @@ export async function createDelivery(eventId: string, endpointId: string) {
       eventId,
       endpointId,
       status: "PENDING",
+      attemptCount: 0,
     },
   });
 }
 
-export async function markDeliverySuccess(id: string) {
-  return prisma.delivery.update({
-    where: { id },
+export async function createDeliveryAttempt(deliveryId: string, attemptNumber: number) {
+  return prisma.deliveryAttempt.create({
     data: {
-      status: "SUCCESS",
-      attempts: { increment: 1 },
+      deliveryId,
+      attemptNumber,
+      status: "PENDING",
     },
   });
 }
 
-export async function markDeliveryFailed(id: string, errorMessage: string) {
-  return prisma.delivery.update({
-    where: { id },
-    data: {
-      status: "FAILED",
-      errorMessage,
-      attempts: { increment: 1 },
-    },
-  });
+export async function recordAttemptSuccess(attemptId: string, deliveryId: string) {
+  return prisma.$transaction([
+    prisma.deliveryAttempt.update({
+      where: { id: attemptId },
+      data: {
+        status: "SUCCESS",
+      },
+    }),
+    prisma.delivery.update({
+      where: { id: deliveryId },
+      data: {
+        status: "SUCCESS",
+        attemptCount: { increment: 1 },
+        latestError: null,
+      },
+    }),
+  ]);
+}
+
+export async function recordAttemptFailure(
+  attemptId: string,
+  deliveryId: string,
+  errorMessage: string,
+  isFinalAttempt: boolean,
+) {
+  return prisma.$transaction([
+    prisma.deliveryAttempt.update({
+      where: { id: attemptId },
+      data: {
+        status: "FAILED",
+        errorMessage,
+      },
+    }),
+    prisma.delivery.update({
+      where: { id: deliveryId },
+      data: {
+        status: isFinalAttempt ? "FAILED" : "PENDING",
+        attemptCount: { increment: 1 },
+        latestError: errorMessage,
+      },
+    }),
+  ]);
 }
 
 export async function getAllDeliveries(page: number, limit: number) {
@@ -38,7 +72,6 @@ export async function getAllDeliveries(page: number, limit: number) {
       take: limit,
       orderBy: { createdAt: "desc" },
     }),
-
     prisma.delivery.count(),
   ]);
 
@@ -51,6 +84,11 @@ export async function getDeliveryById(deliveryId: string) {
     include: {
       event: true,
       endpoint: true,
+      attempts: {
+        orderBy: {
+          attemptNumber: "asc",
+        },
+      },
     },
   });
 }
@@ -58,6 +96,7 @@ export async function getDeliveryById(deliveryId: string) {
 export async function getTotalDeliveriesCount() {
   return prisma.delivery.count();
 }
+
 export async function getSuccessDeliveriesCount() {
   return prisma.delivery.count({
     where: {
@@ -65,6 +104,7 @@ export async function getSuccessDeliveriesCount() {
     },
   });
 }
+
 export async function getFailedDeliveriesCount() {
   return prisma.delivery.count({
     where: {

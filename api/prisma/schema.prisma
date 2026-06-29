@@ -18,24 +18,37 @@ model Event {
 }
 
 model Delivery {
-  id         String   @id @default(cuid())
+  id           String   @id @default(cuid())
 
-  eventId    String
-  event      Event    @relation(fields: [eventId], references: [id])
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id])
 
-  endpointId String
-  endpoint   WebhookEndpoint @relation(fields: [endpointId], references: [id])
+  endpointId   String
+  endpoint     WebhookEndpoint @relation(fields: [endpointId], references: [id])
 
+  status       String
+  attemptCount Int      @default(0)
+  latestError  String?
 
-  status     String
-  attempts   Int      @default(0)
-
-  errorMessage String?
-
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   
+  attempts     DeliveryAttempt[]
+
   @@map("delivery")
+}
+
+model DeliveryAttempt {
+  id            String   @id @default(cuid())
+  deliveryId    String
+  delivery      Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  attemptNumber Int
+  status        String   // SUCCESS, FAILED, PENDING
+  errorMessage  String?
+  startedAt     DateTime @default(now())
+  finishedAt    DateTime @updatedAt
+
+  @@map("delivery_attempt")
 }
 
 model WebhookEndpoint{
