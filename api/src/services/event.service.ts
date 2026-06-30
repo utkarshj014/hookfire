@@ -8,7 +8,7 @@ export async function createEvent(
 ) {
   const event = await prisma.event.create({ data: { eventType, payload } });
 
-  await enqueueFanOutJob(event.id);
+  await enqueueFanOutJob(event.id, eventType);
 
   return event;
 }

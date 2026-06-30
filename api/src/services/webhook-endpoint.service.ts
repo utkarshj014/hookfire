@@ -17,6 +17,19 @@ export async function getEndpointById(id: string) {
   });
 }
 
+export async function getEndpointsForEvent(eventType: string) {
+  return prisma.webhookEndpoint.findMany({
+    where: {
+      isActive: true,
+      subscriptions: {
+        some: {
+          eventType,
+        },
+      },
+    },
+  });
+}
+
 export async function createWebhookEndpoint(url: string, secret: string) {
   const { encrypted, iv, tag } = encryptSecret(secret);
   return prisma.webhookEndpoint.create({
