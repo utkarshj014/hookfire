@@ -2,11 +2,7 @@ import { getActiveEndpoints } from "../services/webhook-endpoint.service.js";
 import { createDelivery } from "../services/delivery.service.js";
 import { enqueueWebhookJob } from "../services/queue.service.js";
 
-export async function processFanOutJob({
-  data: { eventId },
-}: {
-  data: { eventId: string };
-}) {
+export async function processFanOutJob(eventId: string) {
   const endpoints = await getActiveEndpoints();
 
   const results = await Promise.allSettled(

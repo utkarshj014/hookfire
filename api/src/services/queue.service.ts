@@ -21,5 +21,11 @@ export async function enqueueWebhookJob(
 }
 
 export async function enqueueFanOutJob(eventId: string) {
-  return fanOutQueue.add("fan-out-job", { eventId });
+  return fanOutQueue.add(
+    "fan-out",
+    { eventId },
+    {
+      jobId: eventId,
+    },
+  );
 }

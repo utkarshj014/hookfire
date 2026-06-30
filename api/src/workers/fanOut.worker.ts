@@ -5,7 +5,7 @@ import { processFanOutJob } from "../processors/fanOut.processor.js";
 export const fanOutWorker = new Worker(
   "fan-out",
   async (job) => {
-    await processFanOutJob(job);
+    await processFanOutJob(job.data);
   },
   {
     connection: redisConnectionOptions,
