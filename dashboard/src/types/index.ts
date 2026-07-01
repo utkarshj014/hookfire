@@ -1,9 +1,18 @@
+export interface EndpointSubscription {
+  id: string;
+  endpointId: string;
+  eventType: string;
+  createdAt: string;
+}
+
 export interface WebhookEndpoint {
   id: string;
   url: string;
-  secret: string;
   isActive: boolean;
   createdAt: string;
+  rotatedAt?: string;
+  subscriptions?: EndpointSubscription[];
+  rawSecret?: string;
 }
 
 export interface Event {
