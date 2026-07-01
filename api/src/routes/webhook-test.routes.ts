@@ -2,12 +2,12 @@ import { Router } from "express";
 import { verifySignature } from "../utils/signature.js";
 import { acquireIdempotencyKey } from "../services/idempotency.service.js";
 import { env } from "../config/env.js";
+import { prisma } from "../lib/prisma.js";
+import { decryptSecret } from "../utils/crypto.js";
 
 const router = Router();
 
 router.post("/", async (req, res) => {
-  console.log("Webhook test route is working!");
-
   const receivedTimestampStr = req.header("X-Hookfire-Timestamp");
   if (!receivedTimestampStr) {
     return res
@@ -40,45 +40,99 @@ router.post("/", async (req, res) => {
       .json({ message: "Missing required X-Hookfire-Delivery-Id header" });
   }
 
-  const rawBody = req.body;
+  const receivedSignatureHeader = req.header("X-Hookfire-Signature");
+  if (!receivedSignatureHeader) {
+    return res
+      .status(400)
+      .json({ message: "Missing required X-Hookfire-Signature header" });
+  }
 
-  const receivedSignatureHeader = req.header("X-Hookfire-Signature") || "";
-
-  // Parse the X-Hookfire-Signature header which may contain multiple signatures during secret rotation.
-  // We extract the signature value, stripping the scheme prefix if present (e.g., v1=sig1,v0=sig2 -> [sig1, sig2]).
+  // Parse the X-Hookfire-Signature header which may contain both the active and previous secret during a secret rotation grace period.
+  // 1. Gather all signatures using safe string slicing if present (e.g., v1=sig1,v0=sig2 -> [sig1, sig2]).
   const signatures = receivedSignatureHeader.split(",").map((s) => {
-    const parts = s.trim().split("=");
-    return parts.length === 2 ? parts[1]! : s.trim();
+    const trimmed = s.trim();
+    const eqIndex = trimmed.indexOf("=");
+    return eqIndex !== -1 ? trimmed.slice(eqIndex + 1) : trimmed;
   });
 
+  // This is only a mock implementation, for demo purposes.
+  // In a real scenario, the secretsToCheck will be populated from the receiver's database of secrets and their state.
+  const secretsToCheck: string[] = [];
+  secretsToCheck.push(env.WEBHOOK_SECRET);
+
+  try {
+    const delivery = await prisma.delivery.findUnique({
+      where: { id: deliveryId },
+      include: {
+        endpoint: true,
+      },
+    });
+
+    if (delivery?.endpoint) {
+      const endpoint = delivery.endpoint;
+      const decryptedSecret = decryptSecret(
+        endpoint.secretEncrypted,
+        endpoint.secretIv,
+        endpoint.secretTag,
+      );
+      secretsToCheck.push(decryptedSecret);
+
+      if (
+        endpoint.previousSecretEncrypted &&
+        endpoint.previousSecretIv &&
+        endpoint.previousSecretTag &&
+        endpoint.rotatedAt
+      ) {
+        const gracePeriodMs = 24 * 60 * 60 * 1000; // 24 hours
+        const timeSinceRotation = Date.now() - endpoint.rotatedAt.getTime();
+        if (timeSinceRotation < gracePeriodMs) {
+          const decryptedPrevSecret = decryptSecret(
+            endpoint.previousSecretEncrypted,
+            endpoint.previousSecretIv,
+            endpoint.previousSecretTag,
+          );
+          secretsToCheck.push(decryptedPrevSecret);
+        }
+      }
+    }
+  } catch (err) {
+    console.error(
+      "Error looking up endpoint secret for signature verification:",
+      err,
+    );
+    return res.status(503).json({
+      success: false,
+      message: "Webhook delivery system is temporarily unavailable.",
+    });
+  }
+
+  const rawBody = req.body;
   const signaturePayload = Buffer.from(
     `${receivedTimestampStr}.${rawBody.toString("utf8")}`,
   );
 
-  // NOTE: In production, the receiver only verifies against their single active secret.
-  // During a secret rotation grace period, the publisher sends signatures for both the active and
-  // previous secret. The receiver is expected to update their secret key configuration to the new
-  // rotated secret within this grace period. Since the publisher signs with both, the verification
-  // will succeed using either the old or new key during the transition.
+  // The receiver is expected to update their secret key configuration to the new rotated secret within this grace period.
+  // Since the publisher signs with both, the verification will succeed using either the old or new key during the transition.
   const isValid = signatures.some((sig) =>
-    verifySignature(signaturePayload, env.WEBHOOK_SECRET, sig),
+    secretsToCheck.some((secret) =>
+      verifySignature(signaturePayload, secret, sig),
+    ),
   );
 
   if (!isValid) {
     console.log("Signature mismatch! Webhook request may not be authentic.");
     return res
       .status(401)
-      .json({ success: false, message: "Invalid signature" });
+      .json({ success: false, message: "Invalid signature." });
   }
 
   try {
-    const parsedPayload = JSON.parse(rawBody.toString("utf8"));
-    console.log("Request body payload:", parsedPayload);
+    JSON.parse(rawBody.toString("utf8"));
   } catch (err) {
     console.log("Request body is not valid JSON:", rawBody.toString("utf8"));
     return res.status(400).json({
       success: false,
-      message: "Invalid request body",
+      message: "Invalid request body.",
     });
   }
 
@@ -89,8 +143,6 @@ router.post("/", async (req, res) => {
   }
 
   console.log("New webhook received.");
-
-  console.log("Webhook request is authentic.");
 
   return res.status(200).json({ success: true });
 });
