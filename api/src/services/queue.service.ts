@@ -16,6 +16,8 @@ export async function enqueueWebhookJob(
         type: "exponential",
         delay: 1000,
       },
+      removeOnComplete: { count: 1000 },
+      removeOnFail: { count: 5000 },
     },
   );
 }
@@ -26,6 +28,8 @@ export async function enqueueFanOutJob(eventId: string, eventType: string) {
     { eventId, eventType },
     {
       jobId: eventId,
+      removeOnComplete: { count: 1000 },
+      removeOnFail: { count: 5000 },
     },
   );
 }

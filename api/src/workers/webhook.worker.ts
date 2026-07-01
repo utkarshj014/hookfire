@@ -9,6 +9,7 @@ export const webhookWorker = new Worker(
   },
   {
     connection: redisConnectionOptions,
+    concurrency: 50,
   },
 );
 

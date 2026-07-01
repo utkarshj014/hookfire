@@ -27,16 +27,52 @@ export async function deliverWebhookJob(
       webhookEndpoint.secretTag,
     );
 
-    const signature = generateSignature(
-      JSON.stringify(body),
+    let previousSecret: string | null = null;
+    if (
+      webhookEndpoint.previousSecretEncrypted &&
+      webhookEndpoint.previousSecretIv &&
+      webhookEndpoint.previousSecretTag &&
+      webhookEndpoint.rotatedAt
+    ) {
+      const gracePeriodMs = 24 * 60 * 60 * 1000; // 24 hours
+      const timeSinceRotation = Date.now() - webhookEndpoint.rotatedAt.getTime();
+      if (timeSinceRotation < gracePeriodMs) {
+        previousSecret = decryptSecret(
+          webhookEndpoint.previousSecretEncrypted,
+          webhookEndpoint.previousSecretIv,
+          webhookEndpoint.previousSecretTag,
+        );
+      }
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const stringifiedBody = JSON.stringify(body);
+    const signaturePayload = `${timestamp}.${stringifiedBody}`;
+    
+    const activeSignature = generateSignature(
+      signaturePayload,
       decryptedSecret,
     );
+    const signatures = [`v1=${activeSignature}`];
 
-    const response = await axios.post(webhookEndpoint.url, body, {
+    if (previousSecret) {
+      const prevSignature = generateSignature(
+        signaturePayload,
+        previousSecret,
+      );
+      signatures.push(`v0=${prevSignature}`);
+    }
+
+    const signatureHeader = signatures.join(",");
+
+    const response = await axios.post(webhookEndpoint.url, stringifiedBody, {
       headers: {
-        "X-Hookfire-Signature": signature,
+        "Content-Type": "application/json",
+        "X-Hookfire-Signature": signatureHeader,
+        "X-Hookfire-Timestamp": timestamp,
         "X-Hookfire-Delivery-Id": deliveryId,
       },
+      timeout: 10000,
     });
 
     return response.data;

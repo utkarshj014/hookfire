@@ -11,6 +11,19 @@ export async function createDelivery(eventId: string, endpointId: string) {
   });
 }
 
+export async function getOrCreateDelivery(eventId: string, endpointId: string) {
+  const existing = await prisma.delivery.findFirst({
+    where: {
+      eventId,
+      endpointId,
+    },
+  });
+  if (existing) {
+    return existing;
+  }
+  return createDelivery(eventId, endpointId);
+}
+
 export async function createDeliveryAttempt(deliveryId: string, attemptNumber: number) {
   return prisma.deliveryAttempt.create({
     data: {
