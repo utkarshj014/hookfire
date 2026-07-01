@@ -276,6 +276,7 @@ export const Dashboard: React.FC = () => {
     try {
       const response = await api.post<{ data: { rawSecret: string } }>(
         `/endpoints/${id}/rotate-secret`,
+        {},
       );
       setDisplayedSecret(response.data.data.rawSecret);
       setSecretDisplayTitle("Secret Rotated Successfully");
