@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hookfire-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-hookfire}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    # Exposing ports is disabled in prod; services communicate via docker internal network
+
+  redis:
+    image: redis:8-alpine
+    container_name: hookfire-redis-prod
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data_prod:/data
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: hookfire-api-prod
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hookfire}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      PORT: 3000
+      NODE_ENV: production
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    depends_on:
+      - postgres
+      - redis
+
+  fanout-worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: hookfire-fanout-worker-prod
+    restart: always
+    command: npm run fanOut-worker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hookfire}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      NODE_ENV: production
+    depends_on:
+      - postgres
+      - redis
+
+  webhook-worker:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: hookfire-webhook-worker-prod
+    restart: always
+    command: npm run webhook-worker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hookfire}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      NODE_ENV: production
+    depends_on:
+      - postgres
+      - redis
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: hookfire-dashboard-prod
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      VITE_API_URL: ${VITE_API_URL}
+    depends_on:
+      - api
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:

@@ -12,6 +12,10 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
+  ALLOWED_ORIGINS: z
+    .string()
+    .transform((val) => val.split(",").map((s) => s.trim()))
+    .default(["http://localhost:5173, http://localhost:3000"]),
 });
 
 const parsed = envSchema.safeParse(process.env);

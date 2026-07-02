@@ -14,8 +14,6 @@ const app: Application = express();
 
 app.use(loggingMiddleware);
 
-const allowedOrigins = ["http://localhost:5173"];
-
 const corsOptions: CorsOptions = {
   origin: (
     origin: string | undefined,
@@ -23,7 +21,7 @@ const corsOptions: CorsOptions = {
   ) => {
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    if (env.ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
