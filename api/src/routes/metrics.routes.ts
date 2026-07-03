@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { getMetricsHandler, getQueueMetricsHandler } from "../controllers/metrics.controller.js";
+import {
+  getMetricsHandler,
+  getQueueMetricsHandler,
+} from "../controllers/metrics.controller.js";
 
 const router = Router();
 

@@ -36,7 +36,14 @@ export async function processWebhookJob(job: Job) {
     );
 
     logger.info(
-      { jobId: job.id, deliveryId, attempt: attemptNumber, eventId, endpointId, result: webhookResult },
+      {
+        jobId: job.id,
+        deliveryId,
+        attempt: attemptNumber,
+        eventId,
+        endpointId,
+        result: webhookResult,
+      },
       "Job completed successfully: Webhook delivered",
     );
 
@@ -45,16 +52,35 @@ export async function processWebhookJob(job: Job) {
     const isFinalAttempt = attemptNumber >= maxAttempts;
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    await recordAttemptFailure(attempt.id, deliveryId, errorMessage, isFinalAttempt);
+    await recordAttemptFailure(
+      attempt.id,
+      deliveryId,
+      errorMessage,
+      isFinalAttempt,
+    );
 
     if (isFinalAttempt) {
       logger.error(
-        { jobId: job.id, deliveryId, attempt: attemptNumber, eventId, endpointId, error: errorMessage },
+        {
+          jobId: job.id,
+          deliveryId,
+          attempt: attemptNumber,
+          eventId,
+          endpointId,
+          error: errorMessage,
+        },
         "Job permanently failed: Webhook retries exhausted",
       );
     } else {
       logger.warn(
-        { jobId: job.id, deliveryId, attempt: attemptNumber, eventId, endpointId, error: errorMessage },
+        {
+          jobId: job.id,
+          deliveryId,
+          attempt: attemptNumber,
+          eventId,
+          endpointId,
+          error: errorMessage,
+        },
         "Job failed: Retry scheduled",
       );
     }

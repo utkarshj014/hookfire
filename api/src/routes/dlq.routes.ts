@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { getDlqHandler, retryDlqHandler } from "../controllers/dlq.controller.js";
+import {
+  getDlqHandler,
+  retryDlqHandler,
+} from "../controllers/dlq.controller.js";
 
 const router = Router();
 

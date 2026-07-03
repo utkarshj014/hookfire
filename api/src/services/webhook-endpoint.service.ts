@@ -48,7 +48,11 @@ export async function getEndpointsForEvent(eventType: string) {
   });
 }
 
-export async function createWebhookEndpoint(url: string, secret?: string, subscriptions: string[] = []) {
+export async function createWebhookEndpoint(
+  url: string,
+  secret?: string,
+  subscriptions: string[] = [],
+) {
   const actualSecret = secret || crypto.randomBytes(24).toString("hex");
   const { encrypted, iv, tag } = encryptSecret(actualSecret);
 
@@ -76,14 +80,18 @@ export async function createWebhookEndpoint(url: string, secret?: string, subscr
     return {
       ...endpoint,
       rawSecret: actualSecret,
-      subscriptions: subscriptions.map(eventType => ({ eventType })),
+      subscriptions: subscriptions.map((eventType) => ({ eventType })),
     };
   });
 }
 
 export async function updateWebhookEndpoint(
   id: string,
-  data: { url?: string | undefined; isActive?: boolean | undefined; subscriptions?: string[] | undefined }
+  data: {
+    url?: string | undefined;
+    isActive?: boolean | undefined;
+    subscriptions?: string[] | undefined;
+  },
 ) {
   return prisma.$transaction(async (tx) => {
     const updateData: any = {};
@@ -121,7 +129,10 @@ export async function updateWebhookEndpoint(
   });
 }
 
-export async function rotateEndpointSecret(id: string, newSecret?: string | undefined) {
+export async function rotateEndpointSecret(
+  id: string,
+  newSecret?: string | undefined,
+) {
   const endpoint = await prisma.webhookEndpoint.findUnique({
     where: { id },
   });

@@ -35,7 +35,8 @@ export async function deliverWebhookJob(
       webhookEndpoint.rotatedAt
     ) {
       const gracePeriodMs = 24 * 60 * 60 * 1000; // 24 hours
-      const timeSinceRotation = Date.now() - webhookEndpoint.rotatedAt.getTime();
+      const timeSinceRotation =
+        Date.now() - webhookEndpoint.rotatedAt.getTime();
       if (timeSinceRotation < gracePeriodMs) {
         previousSecret = decryptSecret(
           webhookEndpoint.previousSecretEncrypted,
@@ -48,18 +49,16 @@ export async function deliverWebhookJob(
     const timestamp = Math.floor(Date.now() / 1000).toString();
     const stringifiedBody = JSON.stringify(body);
     const signaturePayload = `${timestamp}.${stringifiedBody}`;
-    
+
     const activeSignature = generateSignature(
       signaturePayload,
       decryptedSecret,
     );
+
     const signatures = [`v1=${activeSignature}`];
 
     if (previousSecret) {
-      const prevSignature = generateSignature(
-        signaturePayload,
-        previousSecret,
-      );
+      const prevSignature = generateSignature(signaturePayload, previousSecret);
       signatures.push(`v0=${prevSignature}`);
     }
 

@@ -16,7 +16,12 @@ async function retryWithBackoff<T>(
       throw error;
     }
     await new Promise((resolve) => setTimeout(resolve, delayMs));
-    return retryWithBackoff(fn, retries - 1, delayMs * backoffFactor, backoffFactor);
+    return retryWithBackoff(
+      fn,
+      retries - 1,
+      delayMs * backoffFactor,
+      backoffFactor,
+    );
   }
 }
 
@@ -36,10 +41,15 @@ export async function processFanOutJob({
 
   const results = await Promise.allSettled(
     endpoints.map(async (endpoint) => {
-      return retryWithBackoff(async () => {
-        const delivery = await getOrCreateDelivery(eventId, endpoint.id);
-        return enqueueWebhookJob(eventId, endpoint.id, delivery.id);
-      }, 3, 500, 2);
+      return retryWithBackoff(
+        async () => {
+          const delivery = await getOrCreateDelivery(eventId, endpoint.id);
+          return enqueueWebhookJob(eventId, endpoint.id, delivery.id);
+        },
+        3,
+        500,
+        2,
+      );
     }),
   );
 

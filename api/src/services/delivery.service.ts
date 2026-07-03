@@ -24,7 +24,10 @@ export async function getOrCreateDelivery(eventId: string, endpointId: string) {
   return createDelivery(eventId, endpointId);
 }
 
-export async function createDeliveryAttempt(deliveryId: string, attemptNumber: number) {
+export async function createDeliveryAttempt(
+  deliveryId: string,
+  attemptNumber: number,
+) {
   return prisma.deliveryAttempt.create({
     data: {
       deliveryId,
@@ -34,7 +37,10 @@ export async function createDeliveryAttempt(deliveryId: string, attemptNumber: n
   });
 }
 
-export async function recordAttemptSuccess(attemptId: string, deliveryId: string) {
+export async function recordAttemptSuccess(
+  attemptId: string,
+  deliveryId: string,
+) {
   return prisma.$transaction([
     prisma.deliveryAttempt.update({
       where: { id: attemptId },
@@ -80,8 +86,13 @@ export async function recordAttemptFailure(
   ]);
 }
 
-export async function getAllDeliveries(page: number, limit: number, status?: string) {
-  const where = status && status !== "ALL" ? { status: status.toUpperCase() } : {};
+export async function getAllDeliveries(
+  page: number,
+  limit: number,
+  status?: string,
+) {
+  const where =
+    status && status !== "ALL" ? { status: status.toUpperCase() } : {};
 
   const [data, total] = await prisma.$transaction([
     prisma.delivery.findMany({
