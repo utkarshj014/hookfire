@@ -1009,10 +1009,19 @@ export const Dashboard: React.FC = () => {
                             style={{
                               fontSize: "0.75rem",
                               padding: "0.375rem 0.625rem",
-                              color: "var(--danger)",
-                              borderColor: "rgba(239, 68, 68, 0.2)",
+                              color: endpoint._count && endpoint._count.deliveries > 0 ? "#888888" : "var(--danger)",
+                              borderColor: endpoint._count && endpoint._count.deliveries > 0 ? "rgba(128, 128, 128, 0.2)" : "rgba(239, 68, 68, 0.2)",
+                              opacity: endpoint._count && endpoint._count.deliveries > 0 ? 0.6 : 1,
+                              cursor: endpoint._count && endpoint._count.deliveries > 0 ? "not-allowed" : "pointer",
                             }}
-                            onClick={() => handleDeleteEndpoint(endpoint.id)}
+                            onClick={() => {
+                              if (endpoint._count && endpoint._count.deliveries > 0) {
+                                alert("Cannot delete endpoints with delivery history. If you do not want to use this endpoint, please deactivate it instead.");
+                                return;
+                              }
+                              handleDeleteEndpoint(endpoint.id);
+                            }}
+                            title={endpoint._count && endpoint._count.deliveries > 0 ? "Cannot delete endpoint with delivery history" : "Delete endpoint"}
                           >
                             Delete
                           </button>

@@ -13,6 +13,9 @@ export interface WebhookEndpoint {
   rotatedAt?: string;
   subscriptions?: EndpointSubscription[];
   rawSecret?: string;
+  _count?: {
+    deliveries: number;
+  };
 }
 
 export interface Event {
