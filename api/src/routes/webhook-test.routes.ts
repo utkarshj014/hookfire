@@ -47,6 +47,34 @@ router.post("/", async (req, res) => {
       .json({ message: "Missing required X-Hookfire-Signature header" });
   }
 
+  // Extract the raw body buffer upfront
+  const rawBody = Buffer.isBuffer(req.body)
+    ? req.body
+    : Buffer.from(
+        typeof req.body === "string"
+          ? req.body
+          : JSON.stringify(req.body || {}),
+      );
+
+  // Fail fast if request body is empty
+  if (rawBody.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing or invalid request body.",
+    });
+  }
+
+  // Fail fast if request body is not valid JSON
+  try {
+    JSON.parse(rawBody.toString("utf8"));
+  } catch (err) {
+    console.log("Request body is not valid JSON:", rawBody.toString("utf8"));
+    return res.status(400).json({
+      success: false,
+      message: "Invalid request body.",
+    });
+  }
+
   // Parse the X-Hookfire-Signature header which may contain both the active and previous secret during a secret rotation grace period.
   // 1. Gather all signatures using safe string slicing if present (e.g., v1=sig1,v0=sig2 -> [sig1, sig2]).
   const signatures = receivedSignatureHeader.split(",").map((s) => {
@@ -106,7 +134,6 @@ router.post("/", async (req, res) => {
     });
   }
 
-  const rawBody = req.body;
   const signaturePayload = Buffer.from(
     `${receivedTimestampStr}.${rawBody.toString("utf8")}`,
   );
@@ -124,16 +151,6 @@ router.post("/", async (req, res) => {
     return res
       .status(401)
       .json({ success: false, message: "Invalid signature." });
-  }
-
-  try {
-    JSON.parse(rawBody.toString("utf8"));
-  } catch (err) {
-    console.log("Request body is not valid JSON:", rawBody.toString("utf8"));
-    return res.status(400).json({
-      success: false,
-      message: "Invalid request body.",
-    });
   }
 
   const isAlreadyProcessed = await acquireIdempotencyKey(deliveryId);
