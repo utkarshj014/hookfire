@@ -6,6 +6,11 @@ export async function getAllEndpoints() {
   return prisma.webhookEndpoint.findMany({
     include: {
       subscriptions: true,
+      _count: {
+        select: {
+          deliveries: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -53,6 +58,14 @@ export async function createWebhookEndpoint(
   secret?: string,
   subscriptions: string[] = [],
 ) {
+  const existingEndpoint = await prisma.webhookEndpoint.findFirst({
+    where: { url },
+  });
+
+  if (existingEndpoint) {
+    throw new Error("ENDPOINT_ALREADY_EXISTS");
+  }
+
   const actualSecret = secret || crypto.randomBytes(24).toString("hex");
   const { encrypted, iv, tag } = encryptSecret(actualSecret);
 
@@ -94,6 +107,24 @@ export async function updateWebhookEndpoint(
   },
 ) {
   return prisma.$transaction(async (tx) => {
+    const current = await tx.webhookEndpoint.findUnique({ where: { id } });
+    if (!current) {
+      throw new Error("ENDPOINT_NOT_FOUND");
+    }
+
+    if (data.url !== undefined) {
+      const existingEndpoint = await tx.webhookEndpoint.findFirst({
+        where: {
+          url: data.url,
+          id: { not: id },
+        },
+      });
+
+      if (existingEndpoint) {
+        throw new Error("ENDPOINT_ALREADY_EXISTS");
+      }
+    }
+
     const updateData: any = {};
     if (data.url !== undefined) updateData.url = data.url;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
@@ -163,6 +194,14 @@ export async function rotateEndpointSecret(
 }
 
 export async function deleteWebhookEndpoint(id: string) {
+  const deliveryCount = await prisma.delivery.count({
+    where: { endpointId: id },
+  });
+
+  if (deliveryCount > 0) {
+    throw new Error("CANNOT_DELETE_HAS_DELIVERIES");
+  }
+
   return prisma.webhookEndpoint.delete({
     where: { id },
   });

@@ -54,7 +54,13 @@ export async function createEndpointHandler(
       message: "Webhook endpoint created successfully",
       data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "ENDPOINT_ALREADY_EXISTS") {
+      return res.status(409).json({
+        success: false,
+        message: "A webhook endpoint with this URL already exists. If you want to modify its settings, please update the existing one instead.",
+      });
+    }
     next(error);
   }
 }
@@ -97,7 +103,19 @@ export async function updateEndpointHandler(
       message: "Webhook endpoint updated successfully",
       data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "ENDPOINT_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Webhook endpoint not found",
+      });
+    }
+    if (error.message === "ENDPOINT_ALREADY_EXISTS") {
+      return res.status(409).json({
+        success: false,
+        message: "Cannot update this endpoint because another endpoint with the same URL already exists.",
+      });
+    }
     next(error);
   }
 }
@@ -122,7 +140,13 @@ export async function deleteEndpointHandler(
       success: true,
       message: "Webhook endpoint deleted successfully",
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "CANNOT_DELETE_HAS_DELIVERIES") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete endpoints with delivery history. If you do not want to use this endpoint, please deactivate it instead.",
+      });
+    }
     next(error);
   }
 }

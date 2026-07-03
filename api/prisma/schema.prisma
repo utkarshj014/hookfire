@@ -62,7 +62,7 @@ model DeliveryAttempt {
 
 model WebhookEndpoint {
   id                      String    @id @default(cuid())
-  url                     String
+  url                     String    @unique
   
   secretEncrypted         String    @map("secret_encrypted")
   secretIv                String    @map("secret_iv")
