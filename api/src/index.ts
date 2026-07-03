@@ -28,7 +28,13 @@ const corsOptions: CorsOptions = {
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Hookfire_Delivery-Key"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Hookfire-Signature",
+    "X-Hookfire-Timestamp",
+    "X-Hookfire-Delivery-Id"
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
 };
