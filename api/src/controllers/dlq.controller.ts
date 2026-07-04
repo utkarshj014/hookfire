@@ -52,6 +52,14 @@ export async function retryDlqHandler(
       });
     }
 
+    const state = await job.getState();
+    if (state !== "failed") {
+      return res.status(400).json({
+        success: false,
+        message: `Job is currently in state '${state}' and cannot be retried. Only failed jobs can be retried.`,
+      });
+    }
+
     // Move job to waiting state again
     await job.retry();
 

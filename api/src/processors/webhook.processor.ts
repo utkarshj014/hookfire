@@ -1,4 +1,5 @@
 import type { Job } from "bullmq";
+import { UnrecoverableError } from "bullmq";
 import {
   createDeliveryAttempt,
   recordAttemptSuccess,
@@ -14,7 +15,7 @@ export async function processWebhookJob(job: Job) {
   const event = await getEventById(eventId);
 
   if (!event) {
-    throw new Error(`Event with ID ${eventId} not found`);
+    throw new UnrecoverableError(`Event with ID ${eventId} not found`);
   }
 
   const attemptNumber = job.attemptsMade + 1;
@@ -49,7 +50,7 @@ export async function processWebhookJob(job: Job) {
 
     await recordAttemptSuccess(attempt.id, deliveryId);
   } catch (error: any) {
-    const isFinalAttempt = attemptNumber >= maxAttempts;
+    const isFinalAttempt = attemptNumber >= maxAttempts || error instanceof UnrecoverableError;
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     await recordAttemptFailure(
@@ -68,8 +69,11 @@ export async function processWebhookJob(job: Job) {
           eventId,
           endpointId,
           error: errorMessage,
+          unrecoverable: error instanceof UnrecoverableError,
         },
-        "Job permanently failed: Webhook retries exhausted",
+        error instanceof UnrecoverableError
+          ? "Job permanently failed: Unrecoverable error"
+          : "Job permanently failed: Webhook retries exhausted",
       );
     } else {
       logger.warn(

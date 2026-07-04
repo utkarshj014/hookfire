@@ -14,8 +14,7 @@ const envSchema = z.object({
     .default("development"),
   ALLOWED_ORIGINS: z
     .string()
-    .transform((val) => val.split(",").map((s) => s.trim()))
-    .default(["http://localhost:5173, http://localhost:3000"]),
+    .transform((val) => val.split(",").map((s) => s.trim())),
 });
 
 const parsed = envSchema.safeParse(process.env);

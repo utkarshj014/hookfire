@@ -7,10 +7,15 @@ export function errorMiddleware(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction,
 ): Response {
-  console.error("Unhandled API error caught by middleware:", err);
+  const status = err.status || err.statusCode || 500;
+  const isClientError = status >= 400 && status < 500;
 
-  return res.status(500).json({
+  if (!isClientError) {
+    console.error("Unhandled API error caught by middleware:", err);
+  }
+
+  return res.status(status).json({
     success: false,
-    message: "Internal server error",
+    message: isClientError ? err.message : "Internal server error",
   });
 }

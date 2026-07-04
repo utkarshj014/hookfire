@@ -15,3 +15,7 @@ export const fanOutWorker = new Worker(
 fanOutWorker.on("completed", (job) => {
   console.log(`Job ${job.id} completed successfully`);
 });
+
+fanOutWorker.on("failed", (job, err) => {
+  console.error(`FanOut Job ${job?.id} failed with error: ${err.message}`);
+});

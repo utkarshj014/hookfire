@@ -55,7 +55,7 @@ export async function createEndpointHandler(
       data: result,
     });
   } catch (error: any) {
-    if (error.message === "ENDPOINT_ALREADY_EXISTS") {
+    if (error.message === "ENDPOINT_ALREADY_EXISTS" || error.code === "P2002") {
       return res.status(409).json({
         success: false,
         message: "A webhook endpoint with this URL already exists. If you want to modify its settings, please update the existing one instead.",
@@ -110,7 +110,7 @@ export async function updateEndpointHandler(
         message: "Webhook endpoint not found",
       });
     }
-    if (error.message === "ENDPOINT_ALREADY_EXISTS") {
+    if (error.message === "ENDPOINT_ALREADY_EXISTS" || error.code === "P2002") {
       return res.status(409).json({
         success: false,
         message: "Cannot update this endpoint because another endpoint with the same URL already exists.",
@@ -141,6 +141,12 @@ export async function deleteEndpointHandler(
       message: "Webhook endpoint deleted successfully",
     });
   } catch (error: any) {
+    if (error.message === "ENDPOINT_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Webhook endpoint not found",
+      });
+    }
     if (error.message === "CANNOT_DELETE_HAS_DELIVERIES") {
       return res.status(400).json({
         success: false,
@@ -184,7 +190,13 @@ export async function rotateSecretHandler(
       message: "Webhook endpoint secret rotated successfully",
       data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === "ENDPOINT_NOT_FOUND") {
+      return res.status(404).json({
+        success: false,
+        message: "Webhook endpoint not found",
+      });
+    }
     next(error);
   }
 }

@@ -168,7 +168,7 @@ export async function rotateEndpointSecret(
     where: { id },
   });
   if (!endpoint) {
-    throw new Error(`Endpoint with ID ${id} not found`);
+    throw new Error("ENDPOINT_NOT_FOUND");
   }
 
   const actualSecret = newSecret || crypto.randomBytes(24).toString("hex");
@@ -194,6 +194,14 @@ export async function rotateEndpointSecret(
 }
 
 export async function deleteWebhookEndpoint(id: string) {
+  const endpoint = await prisma.webhookEndpoint.findUnique({
+    where: { id },
+  });
+
+  if (!endpoint) {
+    throw new Error("ENDPOINT_NOT_FOUND");
+  }
+
   const deliveryCount = await prisma.delivery.count({
     where: { endpointId: id },
   });

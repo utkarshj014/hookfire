@@ -24,7 +24,9 @@ const corsOptions: CorsOptions = {
     if (env.ALLOWED_ORIGINS.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error("Not allowed by CORS"));
+      const corsError = new Error("Not allowed by CORS");
+      (corsError as any).status = 403;
+      callback(corsError);
     }
   },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
