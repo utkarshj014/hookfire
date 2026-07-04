@@ -15,6 +15,7 @@ const envSchema = z.object({
   ALLOWED_ORIGINS: z
     .string()
     .transform((val) => val.split(",").map((s) => s.trim())),
+  APP_URL: z.url(),
 });
 
 const parsed = envSchema.safeParse(process.env);

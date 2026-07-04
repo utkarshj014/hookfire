@@ -5,6 +5,7 @@ export async function enqueueWebhookJob(
   eventId: string,
   endpointId: string,
   deliveryId: string,
+  isDemo: boolean = false,
 ) {
   return webhookQueue.add(
     "deliver-webhook",
@@ -14,7 +15,8 @@ export async function enqueueWebhookJob(
       attempts: 3,
       backoff: {
         type: "exponential",
-        delay: 1000,
+        // For DEMO purpose delay is 4s else could be 1s for next retry
+        delay: isDemo ? 4000 : 1000,
       },
       removeOnComplete: { count: 1000 },
       removeOnFail: { count: 5000 },

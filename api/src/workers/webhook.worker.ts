@@ -1,7 +1,6 @@
 import { Worker } from "bullmq";
 import { processWebhookJob } from "../processors/webhook.processor.js";
 import { redisConnectionOptions } from "../config/redis.js";
-
 export const webhookWorker = new Worker(
   "webhook-delivery",
   async (job) => {
@@ -9,7 +8,8 @@ export const webhookWorker = new Worker(
   },
   {
     connection: redisConnectionOptions,
-    concurrency: 50,
+    // For DEMO purpose concurrency is 10 else could be 50
+    concurrency: 10,
   },
 );
 

@@ -84,6 +84,19 @@ export const Dashboard: React.FC = () => {
     null,
   );
 
+  const [isDemoRunning, setIsDemoRunning] = useState(false);
+
+  const checkDemoStatus = useCallback(async () => {
+    try {
+      const response = await api.get<{ data: { isDemoRunning: boolean } }>(
+        "/demo/status",
+      );
+      setIsDemoRunning(response.data.data.isDemoRunning);
+    } catch (err) {
+      console.error("Error checking demo status:", err);
+    }
+  }, []);
+
   // Fetch metrics API
   const fetchMetrics = useCallback(async () => {
     try {
@@ -147,15 +160,17 @@ export const Dashboard: React.FC = () => {
   // Consolidated refresh trigger
   const triggerRefresh = useCallback(async () => {
     setIsRefreshing(true);
+    const promises: Promise<any>[] = [checkDemoStatus()];
     if (activeTab === "deliveries") {
-      await Promise.all([
+      promises.push(
         fetchMetrics(),
         fetchQueueMetrics(),
         fetchDeliveries(currentPage, itemsPerPage, statusFilter),
-      ]);
+      );
     } else if (activeTab === "endpoints") {
-      await fetchEndpoints();
+      promises.push(fetchEndpoints());
     }
+    await Promise.all(promises);
     setIsRefreshing(false);
   }, [
     activeTab,
@@ -163,6 +178,7 @@ export const Dashboard: React.FC = () => {
     fetchQueueMetrics,
     fetchDeliveries,
     fetchEndpoints,
+    checkDemoStatus,
     currentPage,
     itemsPerPage,
     statusFilter,
@@ -170,6 +186,7 @@ export const Dashboard: React.FC = () => {
 
   // Initial load & automatic pagination trigger
   useEffect(() => {
+    checkDemoStatus();
     if (activeTab === "deliveries") {
       fetchMetrics();
       fetchQueueMetrics();
@@ -186,16 +203,18 @@ export const Dashboard: React.FC = () => {
     fetchQueueMetrics,
     fetchDeliveries,
     fetchEndpoints,
+    checkDemoStatus,
   ]);
 
   // Auto-refresh interval (only active on Deliveries tab)
   useEffect(() => {
     if (!autoRefresh || activeTab !== "deliveries") return;
+    const delay = isDemoRunning ? 2000 : 5000;
     const interval = setInterval(() => {
       triggerRefresh();
-    }, 5000);
+    }, delay);
     return () => clearInterval(interval);
-  }, [autoRefresh, activeTab, triggerRefresh]);
+  }, [autoRefresh, activeTab, triggerRefresh, isDemoRunning]);
 
   // Reset page when filter changes
   const handleFilterChange = (newStatus: string) => {
@@ -490,9 +509,48 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="actions-section">
+          <button
+            className="btn btn-primary"
+            style={{
+              backgroundColor: isDemoRunning
+                ? "rgba(139, 92, 246, 0.4)"
+                : "var(--accent-primary)",
+              borderColor: isDemoRunning
+                ? "rgba(139, 92, 246, 0.4)"
+                : "var(--accent-primary)",
+              cursor: isDemoRunning ? "not-allowed" : "pointer",
+            }}
+            onClick={async () => {
+              if (isDemoRunning) return;
+              try {
+                await api.post("/demo/start");
+                setIsDemoRunning(true);
+                setAutoRefresh(true);
+                handleTabChange("deliveries");
+              } catch (err: any) {
+                console.error("Failed to start demo:", err);
+                alert(err.response?.data?.message || "Failed to start demo");
+              }
+            }}
+            disabled={isDemoRunning}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              style={{ marginRight: "4px" }}
+            >
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span>{isDemoRunning ? "Demo Running..." : "Run Demo"}</span>
+          </button>
+
           {activeTab === "deliveries" && (
             <div className="toggle-container">
-              <span>Auto Refresh (5s)</span>
+              <span>Auto Refresh {isDemoRunning ? "(2s)" : "(5s)"}</span>
               <label className="switch">
                 <input
                   type="checkbox"
@@ -1009,19 +1067,44 @@ export const Dashboard: React.FC = () => {
                             style={{
                               fontSize: "0.75rem",
                               padding: "0.375rem 0.625rem",
-                              color: endpoint._count && endpoint._count.deliveries > 0 ? "#888888" : "var(--danger)",
-                              borderColor: endpoint._count && endpoint._count.deliveries > 0 ? "rgba(128, 128, 128, 0.2)" : "rgba(239, 68, 68, 0.2)",
-                              opacity: endpoint._count && endpoint._count.deliveries > 0 ? 0.6 : 1,
-                              cursor: endpoint._count && endpoint._count.deliveries > 0 ? "not-allowed" : "pointer",
+                              color:
+                                endpoint._count &&
+                                endpoint._count.deliveries > 0
+                                  ? "#888888"
+                                  : "var(--danger)",
+                              borderColor:
+                                endpoint._count &&
+                                endpoint._count.deliveries > 0
+                                  ? "rgba(128, 128, 128, 0.2)"
+                                  : "rgba(239, 68, 68, 0.2)",
+                              opacity:
+                                endpoint._count &&
+                                endpoint._count.deliveries > 0
+                                  ? 0.6
+                                  : 1,
+                              cursor:
+                                endpoint._count &&
+                                endpoint._count.deliveries > 0
+                                  ? "not-allowed"
+                                  : "pointer",
                             }}
                             onClick={() => {
-                              if (endpoint._count && endpoint._count.deliveries > 0) {
-                                alert("Cannot delete endpoints with delivery history. If you do not want to use this endpoint, please deactivate it instead.");
+                              if (
+                                endpoint._count &&
+                                endpoint._count.deliveries > 0
+                              ) {
+                                alert(
+                                  "Cannot delete endpoints with delivery history. If you do not want to use this endpoint, please deactivate it instead.",
+                                );
                                 return;
                               }
                               handleDeleteEndpoint(endpoint.id);
                             }}
-                            title={endpoint._count && endpoint._count.deliveries > 0 ? "Cannot delete endpoint with delivery history" : "Delete endpoint"}
+                            title={
+                              endpoint._count && endpoint._count.deliveries > 0
+                                ? "Cannot delete endpoint with delivery history"
+                                : "Delete endpoint"
+                            }
                           >
                             Delete
                           </button>

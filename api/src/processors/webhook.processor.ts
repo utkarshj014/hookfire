@@ -34,6 +34,7 @@ export async function processWebhookJob(job: Job) {
       event.eventType,
       event.payload,
       deliveryId,
+      attemptNumber,
     );
 
     logger.info(
@@ -50,7 +51,8 @@ export async function processWebhookJob(job: Job) {
 
     await recordAttemptSuccess(attempt.id, deliveryId);
   } catch (error: any) {
-    const isFinalAttempt = attemptNumber >= maxAttempts || error instanceof UnrecoverableError;
+    const isFinalAttempt =
+      attemptNumber >= maxAttempts || error instanceof UnrecoverableError;
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     await recordAttemptFailure(

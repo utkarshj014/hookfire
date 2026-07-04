@@ -10,6 +10,7 @@ export async function deliverWebhookJob(
   eventType: string,
   payload: any,
   deliveryId: string,
+  attemptNumber: number = 1,
 ) {
   const body = {
     eventType,
@@ -26,6 +27,36 @@ export async function deliverWebhookJob(
 
   if (!webhookEndpoint.isActive) {
     throw new Error(`Webhook endpoint with ID ${endpointId} is inactive`);
+  }
+
+  // Deterministic Demo Scenario Failure Injection
+  if (eventType.startsWith("demo.")) {
+    // Add artificial delay to simulate latency and make Active states observable
+    await new Promise((resolve) => setTimeout(resolve, 900));
+
+    if (eventType === "demo.payment.succeeded" && attemptNumber === 1) {
+      throw new Error("Demo injected failure (Attempt 1 of 3)");
+    }
+    if (eventType === "demo.invoice.failed" && attemptNumber <= 2) {
+      throw new Error(`Demo injected failure (Attempt ${attemptNumber} of 3)`);
+    }
+    if (eventType === "demo.refund.processed") {
+      if (attemptNumber <= 3) {
+        throw new Error(
+          `Demo injected failure (Attempt ${attemptNumber} of 3)`,
+        );
+      } else if (attemptNumber >= 4) {
+        // Endpoint A/C succeed, Endpoint B/D fail
+        if (
+          webhookEndpoint.url.includes("endpoint=b") ||
+          webhookEndpoint.url.includes("endpoint=d")
+        ) {
+          throw new Error(
+            `Demo injected permanent retry failure (Attempt ${attemptNumber})`,
+          );
+        }
+      }
+    }
   }
 
   let decryptedSecret: string;

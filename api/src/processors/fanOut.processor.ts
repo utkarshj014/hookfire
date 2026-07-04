@@ -56,7 +56,9 @@ export async function processFanOutJob({
           async () => {
             const delivery = await getOrCreateDelivery(eventId, endpoint.id);
             deliveryId = delivery.id;
-            return enqueueWebhookJob(eventId, endpoint.id, delivery.id);
+            // ONLY FOR DEMO purpose, we send isDemo in job
+            const isDemo = eventType.startsWith("demo.");
+            return enqueueWebhookJob(eventId, endpoint.id, delivery.id, isDemo);
           },
           3,
           500,
