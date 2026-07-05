@@ -22,7 +22,7 @@ services:
   api:
     build:
       context: ./api
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: hookfire-api-prod
     restart: always
     ports:
@@ -37,6 +37,7 @@ services:
       PORT: 3000
       NODE_ENV: production
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      APP_URL: ${APP_URL}
     depends_on:
       - postgres
       - redis
@@ -44,7 +45,7 @@ services:
   fanout-worker:
     build:
       context: ./api
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: hookfire-fanout-worker-prod
     restart: always
     command: npm run fanOut-worker
@@ -56,6 +57,8 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       NODE_ENV: production
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      APP_URL: ${APP_URL}
     depends_on:
       - postgres
       - redis
@@ -63,7 +66,7 @@ services:
   webhook-worker:
     build:
       context: ./api
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: hookfire-webhook-worker-prod
     restart: always
     command: npm run webhook-worker
@@ -75,6 +78,8 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       WEBHOOK_SECRET: ${WEBHOOK_SECRET}
       NODE_ENV: production
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      APP_URL: ${APP_URL}
     depends_on:
       - postgres
       - redis
@@ -82,7 +87,7 @@ services:
   dashboard:
     build:
       context: ./dashboard
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
     container_name: hookfire-dashboard-prod
     restart: always
     ports:
