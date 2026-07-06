@@ -26,7 +26,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile.dev
-    image: hookfire-api-devI
+    image: hookfire-api-devimage
     container_name: hookfire-api-dev
     restart: unless-stopped
     ports:
@@ -47,7 +47,7 @@ services:
       - redis
 
   fanout-worker:
-    image: hookfire-api-devI
+    image: hookfire-api-devimage
     container_name: hookfire-fanout-worker-dev
     restart: unless-stopped
     command: npm run fanOut-worker
@@ -66,7 +66,7 @@ services:
       - redis
 
   webhook-worker:
-    image: hookfire-api-devI
+    image: hookfire-api-devimage
     container_name: hookfire-webhook-worker-dev
     restart: unless-stopped
     command: npm run webhook-worker
