@@ -3,7 +3,7 @@ import { redisConnectionOptions } from "../config/redis.js";
 import { processFanoutJob } from "../processors/fanout.processor.js";
 
 export const fanoutWorker = new Worker(
-  "fanout-worker",
+  "fanout-webhook",
   async (job) => {
     await processFanoutJob(job.data);
   },
