@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: hookfire-postgres
+    container_name: hookfire-postgres-dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -14,7 +14,7 @@ services:
 
   redis:
     image: redis:8-alpine
-    container_name: hookfire-redis
+    container_name: hookfire-redis-dev
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD:-my-redis-secure-password}
     ports:
@@ -26,7 +26,8 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile.dev
-    container_name: hookfire-api
+    image: hookfire-api-devI
+    container_name: hookfire-api-dev
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -46,10 +47,8 @@ services:
       - redis
 
   fanout-worker:
-    build:
-      context: ./api
-      dockerfile: Dockerfile.dev
-    container_name: hookfire-fanout-worker
+    image: hookfire-api-devI
+    container_name: hookfire-fanout-worker-dev
     restart: unless-stopped
     command: npm run fanOut-worker
     environment:
@@ -67,10 +66,8 @@ services:
       - redis
 
   webhook-worker:
-    build:
-      context: ./api
-      dockerfile: Dockerfile.dev
-    container_name: hookfire-webhook-worker
+    image: hookfire-api-devI
+    container_name: hookfire-webhook-worker-dev
     restart: unless-stopped
     command: npm run webhook-worker
     environment:

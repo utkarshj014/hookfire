@@ -23,6 +23,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile.prod
+    image: hookfire-api-prodI
     container_name: hookfire-api-prod
     restart: always
     ports:
@@ -43,9 +44,7 @@ services:
       - redis
 
   fanout-worker:
-    build:
-      context: ./api
-      dockerfile: Dockerfile.prod
+    image: hookfire-api-prodI
     container_name: hookfire-fanout-worker-prod
     restart: always
     command: npm run fanOut-worker
@@ -64,9 +63,7 @@ services:
       - redis
 
   webhook-worker:
-    build:
-      context: ./api
-      dockerfile: Dockerfile.prod
+    image: hookfire-api-prodI
     container_name: hookfire-webhook-worker-prod
     restart: always
     command: npm run webhook-worker
