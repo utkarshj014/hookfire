@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { createWebhookEndpoint } from "../services/webhook-endpoint.service.js";
+import { createWebhookEndpoint, updateWebhookEndpoint } from "../services/webhook-endpoint.service.js";
 import { createEvent } from "../services/event.service.js";
 import { env } from "../config/env.js";
+import { prisma } from "../lib/prisma.js";
 
 const router = Router();
 
@@ -84,13 +85,24 @@ const PAYLOADS: Record<string, any> = {
 
 async function ensureDemoEndpointsExist() {
   for (const ep of DEMO_ENDPOINTS) {
-    try {
+    const existing = await prisma.webhookEndpoint.findFirst({
+      where: { url: ep.url },
+      include: { subscriptions: true },
+    });
+
+    if (!existing) {
       await createWebhookEndpoint(ep.url, ep.secret, ep.subscriptions);
-    } catch (err: any) {
-      const isAlreadyExists =
-        err.message === "ENDPOINT_ALREADY_EXISTS" || err.code === "P2002";
-      if (!isAlreadyExists) {
-        throw err;
+    } else {
+      const existingSubs = existing.subscriptions.map((s) => s.eventType);
+      const subscriptionsMatch =
+        existingSubs.length === ep.subscriptions.length &&
+        ep.subscriptions.every((sub) => existingSubs.includes(sub));
+
+      if (!existing.isActive || !subscriptionsMatch) {
+        await updateWebhookEndpoint(existing.id, {
+          isActive: true,
+          subscriptions: ep.subscriptions,
+        });
       }
     }
   }
