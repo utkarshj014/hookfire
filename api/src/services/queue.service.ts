@@ -1,5 +1,5 @@
 import { webhookQueue } from "../queues/webhook.queue.js";
-import { fanOutQueue } from "../queues/fanOut.queue.js";
+import { fanoutQueue } from "../queues/fanout.queue.js";
 
 export async function enqueueWebhookJob(
   eventId: string,
@@ -24,9 +24,9 @@ export async function enqueueWebhookJob(
   );
 }
 
-export async function enqueueFanOutJob(eventId: string, eventType: string) {
-  return fanOutQueue.add(
-    "fan-out",
+export async function enqueueFanoutJob(eventId: string, eventType: string) {
+  return fanoutQueue.add(
+    "fanout-job",
     { eventId, eventType },
     {
       jobId: eventId,

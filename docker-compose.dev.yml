@@ -50,7 +50,7 @@ services:
     image: hookfire-api-devimage
     container_name: hookfire-fanout-worker-dev
     restart: unless-stopped
-    command: npm run fanOut-worker
+    command: npm run fanout-worker
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-hookfire}?schema=public
       REDIS_HOST: redis

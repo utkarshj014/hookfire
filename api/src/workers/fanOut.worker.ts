@@ -1,21 +1,23 @@
 import { Worker } from "bullmq";
 import { redisConnectionOptions } from "../config/redis.js";
-import { processFanOutJob } from "../processors/fanOut.processor.js";
+import { processFanoutJob } from "../processors/fanout.processor.js";
 
-export const fanOutWorker = new Worker(
-  "fan-out",
+export const fanoutWorker = new Worker(
+  "fanout-worker",
   async (job) => {
-    await processFanOutJob(job.data);
+    await processFanoutJob(job.data);
   },
   {
     connection: redisConnectionOptions,
   },
 );
 
-fanOutWorker.on("completed", (job) => {
-  console.log(`Job ${job.id} completed successfully`);
+fanoutWorker.on("completed", (job) => {
+  console.log(`Fanout worker job ${job.id} completed successfully`);
 });
 
-fanOutWorker.on("failed", (job, err) => {
-  console.error(`FanOut Job ${job?.id} failed with error: ${err.message}`);
+fanoutWorker.on("failed", (job, err) => {
+  console.error(
+    `Fanout worker job ${job?.id} failed with error: ${err.message}`,
+  );
 });

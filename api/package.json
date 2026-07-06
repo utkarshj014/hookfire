@@ -8,9 +8,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "webhook-worker": "tsx watch src/webhook-worker.entry.ts",
-    "fanout-worker": "tsx watch src/fanOut-worker.entry.ts",
+    "fanout-worker": "tsx watch src/fanout-worker.entry.ts",
     "start:webhook-worker": "node dist/webhook-worker.entry.js",
-    "start:fanout-worker": "node dist/fanOut-worker.entry.js"
+    "start:fanout-worker": "node dist/fanout-worker.entry.js"
   },
   "keywords": [],
   "author": "",

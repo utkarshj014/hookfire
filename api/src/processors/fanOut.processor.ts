@@ -26,7 +26,7 @@ async function retryWithBackoff<T>(
   }
 }
 
-export async function processFanOutJob({
+export async function processFanoutJob({
   eventId,
   eventType,
 }: {

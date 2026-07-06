@@ -1,3 +1,3 @@
-import "./workers/fanOut.worker.js";
+import "./workers/fanout.worker.js";
 
-console.log("FanOut worker started and listening for jobs...");
+console.log("Fanout worker started and listening for jobs...");
