@@ -47,7 +47,7 @@ services:
     image: hookfire-api-prodimage
     container_name: hookfire-fanout-worker-prod
     restart: always
-    command: npm run fanOut-worker
+    command: npm run start:fanOut-worker
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hookfire}?schema=public
       REDIS_HOST: redis
@@ -66,7 +66,7 @@ services:
     image: hookfire-api-prodimage
     container_name: hookfire-webhook-worker-prod
     restart: always
-    command: npm run webhook-worker
+    command: npm run start:webhook-worker
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hookfire}?schema=public
       REDIS_HOST: redis
