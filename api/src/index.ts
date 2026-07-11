@@ -6,6 +6,7 @@ import metricRoutes from "./routes/metrics.routes.js";
 import dlqRoutes from "./routes/dlq.routes.js";
 import endpointRoutes from "./routes/webhook-endpoint.routes.js";
 import demoRoutes from "./routes/demo.routes.js";
+import healthRoutes from "./routes/health.routes.js";
 import cors, { type CorsOptions } from "cors";
 import { env } from "./config/env.js";
 import { loggingMiddleware } from "./middlewares/logging.middleware.js";
@@ -61,6 +62,7 @@ app.use("/metrics", metricRoutes);
 app.use("/dlq", dlqRoutes);
 app.use("/endpoints", endpointRoutes);
 app.use("/demo", demoRoutes);
+app.use("/health", healthRoutes);
 
 app.get("/", (_req, res) => {
   res.send("Hookfire API RUNNING!!");
