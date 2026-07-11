@@ -48,12 +48,12 @@ app.use(cors(corsOptions));
 app.use(
   "/webhook-test",
   ingestionLimiter,
-  express.raw({ type: "application/json" }),
+  express.raw({ type: "application/json", limit: "256kb" }),
   webhookTestRoutes,
 );
 
 // Global JSON body parser for all other routes
-app.use(express.json());
+app.use(express.json({ limit: "50kb" }));
 
 app.use("/events", eventRoutes);
 app.use("/deliveries", deliveryRoutes);
