@@ -15,7 +15,11 @@ services:
         max-size: "10m"
         max-file: "2"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB:-hookfire}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB:-hookfire}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -43,8 +47,6 @@ services:
     image: hookfire-api-prodimage
     container_name: hookfire-api-prod
     restart: always
-    ports:
-      - "3000:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-hookfire}?schema=public
       REDIS_HOST: redis
@@ -67,7 +69,15 @@ services:
         max-size: "10m"
         max-file: "2"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -140,7 +150,15 @@ services:
         max-size: "10m"
         max-file: "2"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
