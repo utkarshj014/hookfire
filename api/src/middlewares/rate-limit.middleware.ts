@@ -1,19 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { Redis } from "ioredis";
-import { redisConnectionOptions } from "../config/redis.js";
-
-// Initialize a shared Redis client for rate limiting
-const redis = new Redis({
-  host: redisConnectionOptions.host,
-  port: redisConnectionOptions.port,
-  password: redisConnectionOptions.password,
-  maxRetriesPerRequest: 3,
-  enableOfflineQueue: true,
-});
-
-redis.on("error", (err) => {
-  console.error("Rate limiter Redis connection error:", err);
-});
+import { redis } from "../lib/redis.js";
 
 export interface RateLimiterOptions {
   windowMs: number;
@@ -86,10 +72,10 @@ export function createRateLimiter(options: RateLimiterOptions) {
   };
 }
 
-// 1. Read limiter (240 requests per minute) - optimized for auto-refresh dashboard polling
+// 1. Read limiter (300 requests per minute) - optimized for auto-refresh dashboard polling
 export const readLimiter = createRateLimiter({
   windowMs: 60 * 1000,
-  max: 240,
+  max: 300,
   keyPrefix: "ratelimit:read:",
   message: "Too many dashboard refresh requests. Please wait a minute.",
 });

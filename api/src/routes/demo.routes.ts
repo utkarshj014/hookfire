@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma.js";
 import { webhookQueue } from "../queues/webhook.queue.js";
 import { fanoutQueue } from "../queues/fanout.queue.js";
 import { readLimiter, writeLimiter, strictOperationLimiter } from "../middlewares/rate-limit.middleware.js";
+import { redis } from "../lib/redis.js";
 
 const router = Router();
 
@@ -105,12 +106,9 @@ async function resetDemoData() {
 
 async function getNextVisitorId(): Promise<number> {
   try {
-    const [result] = await prisma.$queryRawUnsafe<{ nextval: string }[]>(
-      "SELECT nextval('visitor_counter_seq')::text as nextval",
-    );
-    return Number(result?.nextval || 1);
+    return await redis.incr("hookfire:visitor_counter");
   } catch (err) {
-    console.error("Failed to get next visitor ID from PostgreSQL:", err);
+    console.error("Failed to get next visitor ID from Redis:", err);
     return Math.floor(Math.random() * 1000);
   }
 }
@@ -213,15 +211,12 @@ async function runOrchestrator() {
   }
 }
 
-// Seed default endpoints and initialize visitor sequence on route module load
+// Seed default endpoints on route module load
 (async () => {
   try {
-    await prisma.$executeRawUnsafe(
-      "CREATE SEQUENCE IF NOT EXISTS visitor_counter_seq START WITH 1",
-    );
     await ensureDemoEndpointsExist();
   } catch (err) {
-    console.error("Failed to initialize demo sequence or endpoints on load:", err);
+    console.error("Failed to initialize demo endpoints on load:", err);
   }
 })();
 
