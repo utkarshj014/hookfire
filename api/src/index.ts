@@ -10,7 +10,7 @@ import cors, { type CorsOptions } from "cors";
 import { env } from "./config/env.js";
 import { loggingMiddleware } from "./middlewares/logging.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
-
+import { ingestionLimiter } from "./middlewares/rate-limit.middleware.js";
 const app: Application = express();
 
 app.use(loggingMiddleware);
@@ -47,6 +47,7 @@ app.use(cors(corsOptions));
 // Target ONLY the webhook-test routes to capture raw buffers
 app.use(
   "/webhook-test",
+  ingestionLimiter,
   express.raw({ type: "application/json" }),
   webhookTestRoutes,
 );

@@ -5,6 +5,7 @@ import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 import { webhookQueue } from "../queues/webhook.queue.js";
 import { fanoutQueue } from "../queues/fanout.queue.js";
+import { readLimiter, writeLimiter, strictOperationLimiter } from "../middlewares/rate-limit.middleware.js";
 
 const router = Router();
 
@@ -114,7 +115,7 @@ async function getNextVisitorId(): Promise<number> {
   }
 }
 
-router.post("/start", async (req, res, next): Promise<any> => {
+router.post("/start", strictOperationLimiter, async (req, res, next): Promise<any> => {
   try {
     const demoState = {
       isDemoRunning: true,
@@ -167,7 +168,7 @@ router.post("/start", async (req, res, next): Promise<any> => {
   }
 });
 
-router.get("/status", async (req, res): Promise<any> => {
+router.get("/status", readLimiter, async (req, res): Promise<any> => {
   return res.status(200).json({
     success: true,
     data: {
@@ -181,7 +182,7 @@ router.get("/status", async (req, res): Promise<any> => {
   });
 });
 
-router.post("/visitor", async (req, res, next): Promise<any> => {
+router.post("/visitor", writeLimiter, async (req, res, next): Promise<any> => {
   try {
     const num = await getNextVisitorId();
     return res

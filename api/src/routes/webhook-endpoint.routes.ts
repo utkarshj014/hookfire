@@ -6,13 +6,14 @@ import {
   deleteEndpointHandler,
   rotateSecretHandler,
 } from "../controllers/webhook-endpoint.controller.js";
+import { readLimiter, writeLimiter } from "../middlewares/rate-limit.middleware.js";
 
 const router = Router();
 
-router.get("/", getAllEndpointsHandler);
-router.post("/", createEndpointHandler);
-router.patch("/:id", updateEndpointHandler);
-router.delete("/:id", deleteEndpointHandler);
-router.post("/:id/rotate-secret", rotateSecretHandler);
+router.get("/", readLimiter, getAllEndpointsHandler);
+router.post("/", writeLimiter, createEndpointHandler);
+router.patch("/:id", writeLimiter, updateEndpointHandler);
+router.delete("/:id", writeLimiter, deleteEndpointHandler);
+router.post("/:id/rotate-secret", writeLimiter, rotateSecretHandler);
 
 export default router;
