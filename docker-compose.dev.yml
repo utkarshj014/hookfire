@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
   redis:
     image: redis:8-alpine
@@ -21,6 +26,11 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
   api:
     build:
@@ -45,6 +55,11 @@ services:
     depends_on:
       - postgres
       - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
   fanout-worker:
     image: hookfire-api-devimage
@@ -64,6 +79,11 @@ services:
     depends_on:
       - postgres
       - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
   webhook-worker:
     image: hookfire-api-devimage
@@ -83,6 +103,11 @@ services:
     depends_on:
       - postgres
       - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
   dashboard:
     build:
@@ -96,6 +121,11 @@ services:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     depends_on:
       - api
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
 
 volumes:
   postgres_data:

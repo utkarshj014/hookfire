@@ -85,17 +85,101 @@ export const Dashboard: React.FC = () => {
   );
 
   const [isDemoRunning, setIsDemoRunning] = useState(false);
+  const [demoStartedAt, setDemoStartedAt] = useState<string | null>(null);
+  const [demoStartedBy, setDemoStartedBy] = useState<string | null>(null);
+  const [demoDuration, setDemoDuration] = useState<number>(80);
+  const [countdown, setCountdown] = useState<number>(0);
+  const [visitorId, setVisitorId] = useState<string>("");
+  const [clickWarning, setClickWarning] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+
+  // Initialize visitor ID on mount
+  useEffect(() => {
+    const initVisitor = async () => {
+      let stored = localStorage.getItem("hookfire_visitor_id");
+      if (!stored) {
+        try {
+          const response = await api.post<{ success: boolean; visitorId: string }>("/demo/visitor");
+          stored = response.data.visitorId;
+          localStorage.setItem("hookfire_visitor_id", stored);
+        } catch (err) {
+          console.error("Failed to register visitor:", err);
+          stored = `Visitor #${Math.floor(Math.random() * 900 + 100)}`;
+        }
+      }
+      setVisitorId(stored);
+    };
+    initVisitor();
+  }, []);
 
   const checkDemoStatus = useCallback(async () => {
     try {
-      const response = await api.get<{ data: { isDemoRunning: boolean } }>(
-        "/demo/status",
-      );
-      setIsDemoRunning(response.data.data.isDemoRunning);
+      const response = await api.get<{
+        data: {
+          isDemoRunning: boolean;
+          startedAt: string | null;
+          startedBy: string | null;
+          durationSeconds: number;
+          bufferSeconds: number;
+          currentTime: string;
+        };
+      }>("/demo/status");
+      const {
+        isDemoRunning: running,
+        startedAt,
+        startedBy,
+        durationSeconds,
+        bufferSeconds,
+        currentTime,
+      } = response.data.data;
+
+      setIsDemoRunning(running);
+      setDemoStartedAt(startedAt);
+      setDemoStartedBy(startedBy);
+
+      const totalDur = durationSeconds + bufferSeconds;
+      setDemoDuration(totalDur);
+
+      if (running && startedAt && currentTime) {
+        const startMs = new Date(startedAt).getTime();
+        const currentMs = new Date(currentTime).getTime();
+        const elapsedSec = Math.max(0, Math.floor((currentMs - startMs) / 1000));
+        const rem = Math.max(0, totalDur - elapsedSec);
+        setCountdown(rem);
+        setElapsedSeconds(elapsedSec);
+      } else {
+        setCountdown(0);
+        setElapsedSeconds(0);
+      }
     } catch (err) {
       console.error("Error checking demo status:", err);
     }
   }, []);
+
+  // Real-time countdown tick (using purely local state ticks to be clock-skew-resilient)
+  useEffect(() => {
+    if (!isDemoRunning) {
+      setCountdown(0);
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        const next = prev - 1;
+        if (next <= 0) {
+          setIsDemoRunning(false);
+          setDemoStartedAt(null);
+          setDemoStartedBy(null);
+          return 0;
+        }
+        return next;
+      });
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isDemoRunning]);
 
   // Fetch metrics API
   const fetchMetrics = useCallback(async () => {
@@ -513,26 +597,45 @@ export const Dashboard: React.FC = () => {
             className="btn btn-primary"
             style={{
               backgroundColor: isDemoRunning
-                ? "rgba(139, 92, 246, 0.4)"
+                ? "rgba(139, 92, 246, 0.25)"
                 : "var(--accent-primary)",
               borderColor: isDemoRunning
                 ? "rgba(139, 92, 246, 0.4)"
                 : "var(--accent-primary)",
+              color: isDemoRunning ? "var(--text-secondary)" : "var(--text-primary)",
               cursor: isDemoRunning ? "not-allowed" : "pointer",
             }}
             onClick={async () => {
-              if (isDemoRunning) return;
+              if (isDemoRunning) {
+                setClickWarning(`A demo is already in progress. Please wait ~${countdown} seconds.`);
+                setTimeout(() => setClickWarning(null), 5000);
+                return;
+              }
               try {
-                await api.post("/demo/start");
+                const response = await api.post("/demo/start", { visitorId });
+                const { startedAt, startedBy, durationSeconds, bufferSeconds } = response.data.data;
                 setIsDemoRunning(true);
+                setDemoStartedAt(startedAt);
+                setDemoStartedBy(startedBy);
+                setDemoDuration(durationSeconds + bufferSeconds);
+                setCountdown(durationSeconds + bufferSeconds);
+                setElapsedSeconds(0);
                 setAutoRefresh(true);
                 handleTabChange("deliveries");
               } catch (err: any) {
                 console.error("Failed to start demo:", err);
-                alert(err.response?.data?.message || "Failed to start demo");
+                const backendMsg = err.response?.data?.message;
+                const errData = err.response?.data?.data;
+                if (errData?.isDemoRunning) {
+                  setIsDemoRunning(true);
+                  setDemoStartedAt(errData.startedAt);
+                  setDemoStartedBy(errData.startedBy);
+                  setDemoDuration(errData.durationSeconds + errData.bufferSeconds);
+                }
+                setClickWarning(backendMsg || "Failed to start demo");
+                setTimeout(() => setClickWarning(null), 5000);
               }
             }}
-            disabled={isDemoRunning}
           >
             <svg
               width="16"
@@ -545,7 +648,7 @@ export const Dashboard: React.FC = () => {
             >
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
             </svg>
-            <span>{isDemoRunning ? "Demo Running..." : "Run Demo"}</span>
+            <span>{isDemoRunning ? `Demo Running (${countdown}s)` : "Run Demo"}</span>
           </button>
 
           {activeTab === "deliveries" && (
@@ -588,6 +691,54 @@ export const Dashboard: React.FC = () => {
           )}
         </div>
       </header>
+
+      {/* Public Demo Environment Banner */}
+      <div className="demo-banner animate-fade-in">
+        <div className="demo-banner-content">
+          <div className="demo-banner-left">
+            <span className="demo-emoji">🚀</span>
+            <div className="demo-banner-text">
+              <h3>Public Demo Environment</h3>
+              <p>This is a shared demonstration instance. Running the simulation affects all active visitors.</p>
+            </div>
+          </div>
+          
+          {isDemoRunning ? (
+            <div className="demo-status-card">
+              <div className="demo-status-header">
+                <span className="status-dot running">●</span>
+                <span className="status-text">Running</span>
+              </div>
+              <div className="demo-status-info">
+                <span>Started {elapsedSeconds}s ago</span>
+                <span className="divider">•</span>
+                <span>Started by {demoStartedBy || "Visitor"}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="demo-status-card idle">
+              <div className="demo-status-header">
+                <span className="status-dot">●</span>
+                <span className="status-text">Idle</span>
+              </div>
+              <div className="demo-status-info">
+                <span>Ready to start a simulation</span>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {clickWarning && (
+          <div className="demo-banner-warning animate-fade-in">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: "6px" }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>{clickWarning}</span>
+          </div>
+        )}
+      </div>
 
       {/* TABS BODY */}
 

@@ -36,7 +36,7 @@ const corsOptions: CorsOptions = {
     "Authorization",
     "X-Hookfire-Signature",
     "X-Hookfire-Timestamp",
-    "X-Hookfire-Delivery-Id"
+    "X-Hookfire-Delivery-Id",
   ],
   credentials: true,
   optionsSuccessStatus: 200,

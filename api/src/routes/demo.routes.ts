@@ -1,50 +1,45 @@
 import { Router } from "express";
-import { createWebhookEndpoint, updateWebhookEndpoint } from "../services/webhook-endpoint.service.js";
+import { createWebhookEndpoint } from "../services/webhook-endpoint.service.js";
 import { createEvent } from "../services/event.service.js";
 import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
+import { webhookQueue } from "../queues/webhook.queue.js";
+import { fanoutQueue } from "../queues/fanout.queue.js";
 
 const router = Router();
 
 let isDemoRunning = false;
+let demoStartedAt: Date | null = null;
+let demoStartedBy: string | null = null;
 
+const DEMO_DURATION_SECONDS = 75;
+const BUFFER_SECONDS = 15;
 const ROOT_URL = env.APP_URL;
 
-const DEMO_ENDPOINTS = [
-  {
-    url: `${ROOT_URL}/webhook-test?endpoint=a`,
-    secret: "demo-signing-secret-a-948294",
-    subscriptions: [
+const DEMO_ENDPOINTS = ["a", "b", "c", "d"].map((char) => {
+  const subs: Record<string, string[]> = {
+    a: [
       "demo.user.created",
       "demo.payment.succeeded",
       "demo.invoice.failed",
       "demo.refund.processed",
     ],
-  },
-  {
-    url: `${ROOT_URL}/webhook-test?endpoint=b`,
-    secret: "demo-signing-secret-b-948294",
-    subscriptions: [
-      "demo.user.created",
-      "demo.order.shipped",
-      "demo.refund.processed",
-    ],
-  },
-  {
-    url: `${ROOT_URL}/webhook-test?endpoint=c`,
-    secret: "demo-signing-secret-c-948294",
-    subscriptions: [
-      "demo.payment.succeeded",
-      "demo.invoice.failed",
-      "demo.order.shipped",
-    ],
-  },
-  {
-    url: `${ROOT_URL}/webhook-test?endpoint=d`,
-    secret: "demo-signing-secret-d-948294",
-    subscriptions: ["demo.invoice.failed", "demo.refund.processed"],
-  },
-];
+    b: ["demo.user.created", "demo.order.shipped", "demo.refund.processed"],
+    c: ["demo.payment.succeeded", "demo.invoice.failed", "demo.order.shipped"],
+    d: ["demo.invoice.failed", "demo.refund.processed"],
+  };
+  return {
+    url: `${ROOT_URL}/webhook-test?endpoint=${char}`,
+    secret: `demo-signing-secret-${char}-948294`,
+    subscriptions: subs[char]!,
+  };
+});
+
+const STANDARD_ENDPOINT = {
+  url: `${ROOT_URL}/webhook-test`,
+  secret: "standard-signing-secret-948294",
+  subscriptions: ["user.created", "payment.succeeded", "order.shipped"],
+};
 
 const SUCCESS_EVENT_TYPES = ["demo.user.created", "demo.order.shipped"];
 const ALL_EVENT_TYPES = [
@@ -84,54 +79,88 @@ const PAYLOADS: Record<string, any> = {
 };
 
 async function ensureDemoEndpointsExist() {
-  for (const ep of DEMO_ENDPOINTS) {
-    const existing = await prisma.webhookEndpoint.findFirst({
-      where: { url: ep.url },
-      include: { subscriptions: true },
-    });
+  for (const ep of [...DEMO_ENDPOINTS, STANDARD_ENDPOINT]) {
+    await prisma.webhookEndpoint.deleteMany({ where: { url: ep.url } });
+    await createWebhookEndpoint(ep.url, ep.secret, ep.subscriptions);
+  }
+}
 
-    if (!existing) {
-      await createWebhookEndpoint(ep.url, ep.secret, ep.subscriptions);
-    } else {
-      const existingSubs = existing.subscriptions.map((s) => s.eventType);
-      const subscriptionsMatch =
-        existingSubs.length === ep.subscriptions.length &&
-        ep.subscriptions.every((sub) => existingSubs.includes(sub));
+async function resetDemoData() {
+  await prisma.processedWebhook.deleteMany({});
+  await prisma.deliveryAttempt.deleteMany({});
+  await prisma.delivery.deleteMany({});
+  await prisma.event.deleteMany({});
+  await prisma.webhookEndpoint.deleteMany({}); // cascades to EndpointSubscription
 
-      if (!existing.isActive || !subscriptionsMatch) {
-        await updateWebhookEndpoint(existing.id, {
-          isActive: true,
-          subscriptions: ep.subscriptions,
-        });
-      }
-    }
+  try {
+    await webhookQueue.obliterate({ force: true });
+    await fanoutQueue.obliterate({ force: true });
+  } catch (err) {
+    console.error("Failed to obliterate queues during reset:", err);
+  }
+
+  await ensureDemoEndpointsExist();
+}
+
+async function getNextVisitorId(): Promise<number> {
+  try {
+    const [result] = await prisma.$queryRawUnsafe<{ nextval: string }[]>(
+      "SELECT nextval('visitor_counter_seq')::text as nextval",
+    );
+    return Number(result?.nextval || 1);
+  } catch (err) {
+    console.error("Failed to get next visitor ID from PostgreSQL:", err);
+    return Math.floor(Math.random() * 1000);
   }
 }
 
 router.post("/start", async (req, res, next): Promise<any> => {
   try {
+    const demoState = {
+      isDemoRunning: true,
+      startedAt: demoStartedAt,
+      startedBy: demoStartedBy,
+      durationSeconds: DEMO_DURATION_SECONDS,
+      bufferSeconds: BUFFER_SECONDS,
+    };
+
     if (isDemoRunning) {
       return res.status(400).json({
         success: false,
         message: "A demo scenario is already running.",
+        data: demoState,
       });
     }
 
+    const visitorId = req.body.visitorId || "Visitor #Unknown";
     isDemoRunning = true;
+    demoStartedAt = new Date();
+    demoStartedBy = visitorId;
 
-    // Ensure demo endpoints exist before generating events
-    await ensureDemoEndpointsExist();
+    await resetDemoData();
 
-    // Start background event scheduling loop
-    runOrchestrator().catch((err) => {
-      console.error("Error running demo orchestrator:", err);
-      isDemoRunning = false;
-    });
+    runOrchestrator().catch((err) =>
+      console.error("Error running demo orchestrator:", err),
+    );
+
+    setTimeout(
+      () => {
+        isDemoRunning = false;
+        demoStartedAt = null;
+        demoStartedBy = null;
+      },
+      (DEMO_DURATION_SECONDS + BUFFER_SECONDS) * 1000,
+    );
 
     return res.status(200).json({
       success: true,
       message:
         "Demo scenario started successfully. Switch to the Deliveries tab to observe updates.",
+      data: {
+        ...demoState,
+        startedAt: demoStartedAt,
+        startedBy: demoStartedBy,
+      },
     });
   } catch (error) {
     next(error);
@@ -143,46 +172,57 @@ router.get("/status", async (req, res): Promise<any> => {
     success: true,
     data: {
       isDemoRunning,
+      startedAt: demoStartedAt,
+      startedBy: demoStartedBy,
+      durationSeconds: DEMO_DURATION_SECONDS,
+      bufferSeconds: BUFFER_SECONDS,
+      currentTime: new Date(),
     },
   });
+});
+
+router.post("/visitor", async (req, res, next): Promise<any> => {
+  try {
+    const num = await getNextVisitorId();
+    return res
+      .status(200)
+      .json({ success: true, visitorId: `Visitor #${num}` });
+  } catch (error) {
+    next(error);
+  }
 });
 
 async function runOrchestrator() {
   const totalEvents = 150;
   const batchSize = 5;
-  const intervalMs = 2.5 * 1000;
-  const totalBatches = totalEvents / batchSize;
+  const intervalMs = 2500;
 
-  for (let batch = 0; batch < totalBatches; batch++) {
-    const startIdx = batch * batchSize;
-
-    // Determine event types for this batch of 5 events
+  for (let batch = 0; batch < totalEvents / batchSize; batch++) {
     for (let i = 0; i < batchSize; i++) {
-      const globalEventIndex = startIdx + i;
-      let eventType: string;
-
-      if (globalEventIndex < 50) {
-        // First 50 events are only success types
-        eventType =
-          SUCCESS_EVENT_TYPES[globalEventIndex % SUCCESS_EVENT_TYPES.length]!;
-      } else {
-        // Last 100 events are mixed
-        eventType =
-          ALL_EVENT_TYPES[(globalEventIndex - 50) % ALL_EVENT_TYPES.length]!;
-      }
-
-      const payload = PAYLOADS[eventType];
-      await createEvent(eventType, payload);
+      const idx = batch * batchSize + i;
+      const eventType =
+        idx < 50
+          ? SUCCESS_EVENT_TYPES[idx % SUCCESS_EVENT_TYPES.length]!
+          : ALL_EVENT_TYPES[(idx - 50) % ALL_EVENT_TYPES.length]!;
+      await createEvent(eventType, PAYLOADS[eventType]);
     }
-
-    if (batch < totalBatches - 1) {
-      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    if (batch < totalEvents / batchSize - 1) {
+      await new Promise((r) => setTimeout(r, intervalMs));
     }
   }
-
-  isDemoRunning = false;
 }
 
-export { isDemoRunning };
+// Seed default endpoints and initialize visitor sequence on route module load
+(async () => {
+  try {
+    await prisma.$executeRawUnsafe(
+      "CREATE SEQUENCE IF NOT EXISTS visitor_counter_seq START WITH 1",
+    );
+    await ensureDemoEndpointsExist();
+  } catch (err) {
+    console.error("Failed to initialize demo sequence or endpoints on load:", err);
+  }
+})();
 
+export { isDemoRunning };
 export default router;
