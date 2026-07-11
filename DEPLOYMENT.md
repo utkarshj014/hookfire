@@ -80,7 +80,7 @@ Configure:
 
 ### Backend
 
-- DATABASE_URL (constructed internally by Docker Compose from POSTGRES_* vars in `docker-compose.prod.yml`)
+- DATABASE*URL (constructed internally by Docker Compose from POSTGRES*\* vars in `docker-compose.prod.yml`)
 - WEBHOOK_SECRET
 - ENCRYPTION_KEY
 - APP_URL
@@ -173,7 +173,7 @@ Nginx:
 - Serve React build (static files, SPA fallback via `try_files`).
 - Proxy API routes (`/events`, `/deliveries`, `/metrics`, `/dlq`, `/endpoints`, `/demo`, `/webhook-test`) to `api:3000`.
 
-Since all traffic goes through Nginx (same origin), no CORS configuration is needed in production.
+Since Nginx proxies requests, browser-side CORS blocks are bypassed. However, because browsers still send same-origin `Origin` headers for write operations (POST, PATCH, DELETE), configure `ALLOWED_ORIGINS` to include the production domain/IP to satisfy the backend CORS middleware.
 
 ---
 

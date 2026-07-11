@@ -449,6 +449,7 @@ The fan-out processor uses an internal `retryWithBackoff` (3 retries, 500ms base
 - **Port Exposure**: Dev binds `5432` and `6379` to the host for direct access. Prod omits these host bindings - services communicate only on the Docker internal network.
 - **Redis Prod Mode**: Persistence disabled (`--save "" --appendonly no`) - queue state is ephemeral by design.
 - **Health Checks**: `api` exposes `GET /health` (checks Postgres + Redis). `dashboard` probes its Nginx port. Both used as Compose `depends_on` conditions.
+- **Nginx HTTP Keep-Alive**: The production reverse proxy uses HTTP/1.1 (`proxy_http_version 1.1`), implicitly enabling persistent TCP connections (keep-alive) to backend services.
 - **Env Hierarchy**: Root `.env` supplies Compose variable substitution. `api/.env` and `dashboard/.env` are for bare-metal dev runs.
 
 ### Environment Variables
