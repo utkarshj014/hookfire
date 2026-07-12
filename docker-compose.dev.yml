@@ -17,7 +17,11 @@ services:
         max-size: "10m"
         max-file: "2"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-hookfire}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-hookfire}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,7 +41,14 @@ services:
         max-size: "10m"
         max-file: "2"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-my-redis-secure-password}", "ping"]
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "-a",
+          "${REDIS_PASSWORD:-my-redis-secure-password}",
+          "ping",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -73,7 +84,15 @@ services:
         max-size: "10m"
         max-file: "2"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -146,7 +165,15 @@ services:
         max-size: "10m"
         max-file: "2"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:5173",
+        ]
       interval: 15s
       timeout: 5s
       retries: 3

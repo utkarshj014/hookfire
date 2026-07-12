@@ -338,10 +338,10 @@ $$\text{Delay} = \text{Initial Delay} \times 2^{\text{attemptsMade} - 1}$$
 
 For production (`initialDelay = 1,000ms`):
 
-| Attempt | Executed After | Outcome if Failed      |
-| :------ | :------------- | :--------------------- |
-| 1       | Immediately    | Retry in **1,000ms**   |
-| 2       | +1s            | Retry in **2,000ms**   |
+| Attempt | Executed After | Outcome if Failed        |
+| :------ | :------------- | :----------------------- |
+| 1       | Immediately    | Retry in **1,000ms**     |
+| 2       | +1s            | Retry in **2,000ms**     |
 | 3       | +2s            | --> DLQ (`failed` state) |
 
 ### C. Fan-Out Resilience
@@ -456,18 +456,18 @@ The fan-out processor uses an internal `retryWithBackoff` (3 retries, 500ms base
 
 **Root `.env`** — Compose-level substitution; consumed by all containers:
 
-| Variable            | Required | Default / Example                                                | Description                                    |
-| :------------------ | :------- | :--------------------------------------------------------------- | :--------------------------------------------- |
-| `POSTGRES_USER`     | ✅       | `postgres`                                                       | PostgreSQL superuser name                      |
-| `POSTGRES_PASSWORD` | ✅       | `postgres`                                                       | PostgreSQL superuser password                  |
-| `POSTGRES_DB`       | —        | `hookfire`                                                       | Database name                                  |
-| `REDIS_PASSWORD`    | ✅       | `my-redis-secure-password`                                       | Redis auth password                            |
-| `ENCRYPTION_KEY`    | ✅       | _(32 chars)_                                                     | AES-256-GCM master key — exactly 32 bytes      |
-| `WEBHOOK_SECRET`    | ✅       | `global-webhook-fallback-secret`                                 | Global fallback signing secret (test receiver) |
-| `ALLOWED_ORIGINS`   | ✅       | `http://localhost:5173,http://localhost:3000`                    | Comma-separated CORS origin whitelist          |
-| `PORT`              | —        | `3000`                                                           | API server port                                |
+| Variable            | Required | Default / Example                                                | Description                                     |
+| :------------------ | :------- | :--------------------------------------------------------------- | :---------------------------------------------- |
+| `POSTGRES_USER`     | ✅       | `postgres`                                                       | PostgreSQL superuser name                       |
+| `POSTGRES_PASSWORD` | ✅       | `postgres`                                                       | PostgreSQL superuser password                   |
+| `POSTGRES_DB`       | —        | `hookfire`                                                       | Database name                                   |
+| `REDIS_PASSWORD`    | ✅       | `my-redis-secure-password`                                       | Redis auth password                             |
+| `ENCRYPTION_KEY`    | ✅       | _(32 chars)_                                                     | AES-256-GCM master key — exactly 32 bytes       |
+| `WEBHOOK_SECRET`    | ✅       | `global-webhook-fallback-secret`                                 | Global fallback signing secret (test receiver)  |
+| `ALLOWED_ORIGINS`   | ✅       | `http://localhost:5173,http://localhost:3000`                    | Comma-separated CORS origin whitelist           |
+| `PORT`              | —        | `3000`                                                           | API server port                                 |
 | `VITE_API_URL`      | ✅       | `http://localhost:3000`                                          | Dashboard -> API base URL (consumed in browser) |
-| `APP_URL`           | ✅       | `http://api:3000` _(Docker)_ / `http://localhost:3000` _(local)_ | API base URL for demo receiver URLs            |
+| `APP_URL`           | ✅       | `http://api:3000` _(Docker)_ / `http://localhost:3000` _(local)_ | API base URL for demo receiver URLs             |
 
 **`api/.env`** — Backend bare-metal runs only (overrides Compose env):
 
